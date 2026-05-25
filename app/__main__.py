@@ -1,11 +1,10 @@
 import argparse
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 
 from .collector import fetch_rank
-from .db import get_thread_id, init_db, save_thread_id
-from .notifier import post_daily
+from .notifier import post_daily, STYLES
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,30 +19,18 @@ CATEGORIES = [
 ]
 
 
-def run_once(dry_run: bool = False):
-    init_db()
+def run_once(dry_run: bool = False, style: str = "thumb1"):
     now = datetime.now()
-    today = now.strftime("%Y-%m-%d")
-    now_iso = datetime.now(timezone.utc).isoformat()
 
     for cat in CATEGORIES:
         cat_id, cat_name, emoji = cat["id"], cat["name"], cat["emoji"]
-
-        # 오늘 이미 올렸으면 스킵
-        if get_thread_id(today, cat_id):
-            logger.info("%s — 오늘 이미 포스팅됨", cat_name)
-            continue
 
         deals = fetch_rank(cat_id)
         if not deals:
             logger.warning("%s — 딜 없음", cat_name)
             continue
 
-        thread_id = post_daily(now, cat_id, cat_name, emoji, deals, dry_run)
-
-        if not dry_run:
-            save_thread_id(today, cat_id, cat_name, thread_id, now_iso)
-
+        post_daily(now, cat_id, cat_name, emoji, deals, dry_run, style)
         logger.info("%s — 완료", cat_name)
         time.sleep(2)
 
@@ -53,10 +40,11 @@ def main():
     sub = parser.add_subparsers(dest="cmd")
     p = sub.add_parser("run-once")
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--style", choices=STYLES, default="thumb1")
     args = parser.parse_args()
 
     if args.cmd == "run-once":
-        run_once(dry_run=args.dry_run)
+        run_once(dry_run=args.dry_run, style=args.style)
     else:
         parser.print_help()
 

@@ -50,6 +50,10 @@ def _parse_card(card):
     if not url:
         return None
 
+    # 상품 이미지
+    img_el = card.select_one("div.avatar img")
+    image_url = img_el["src"] if img_el and img_el.get("src") else None
+
     # 랭킹 순위
     rank_el = card.find("span", class_=lambda c: c and "badge-warning" in c)
     try:
@@ -99,6 +103,7 @@ def _parse_card(card):
         "recommend": recommend,
         "comments": comments,
         "viewers": viewers,
+        "image_url": image_url,
     }
 
 

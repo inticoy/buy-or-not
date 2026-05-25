@@ -1,0 +1,36 @@
+name: 살래말래 DEV 테스트
+
+on:
+  workflow_dispatch:
+    inputs:
+      style:
+        description: '포스팅 스타일'
+        required: false
+        default: 'thumb1'
+        type: choice
+        options:
+          - thumb1
+          - thumb3
+          - text
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python 세팅
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 봇 실행
+        env:
+          BOT_ENV: dev
+          DISCORD_WEBHOOK_DEV: ${{ secrets.DISCORD_WEBHOOK_DEV }}
+        run: python -m app run-once --style ${{ inputs.style }}

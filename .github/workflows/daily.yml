@@ -12,13 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: DB 캐시 복원
-        uses: actions/cache@v4
-        with:
-          path: data/deals.db
-          key: deals-db-${{ github.run_id }}
-          restore-keys: deals-db-
-
       - name: Python 세팅
         uses: actions/setup-python@v5
         with:
@@ -30,5 +23,6 @@ jobs:
 
       - name: 봇 실행
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          BOT_ENV: prod
+          DISCORD_WEBHOOK_PROD: ${{ secrets.DISCORD_WEBHOOK_PROD }}
         run: python -m app run-once

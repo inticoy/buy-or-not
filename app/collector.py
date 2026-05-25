@@ -50,9 +50,12 @@ def _parse_card(card):
     if not url:
         return None
 
-    # 상품 이미지
+    # 상품 이미지 (512x512로 업스케일)
     img_el = card.select_one("div.avatar img")
-    image_url = img_el["src"] if img_el and img_el.get("src") else None
+    if img_el and img_el.get("src"):
+        image_url = re.sub(r'\?d=\d+x\d+$', '?d=1024x1024', img_el["src"])
+    else:
+        image_url = None
 
     # 랭킹 순위
     rank_el = card.find("span", class_=lambda c: c and "badge-warning" in c)

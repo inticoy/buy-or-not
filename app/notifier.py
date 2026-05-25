@@ -120,9 +120,28 @@ def _payload_thumb3(thread_name, deals, color):
     }
 
 
+def _payload_cards(thread_name, deals, color):
+    """딜마다 embed 하나 — 좌측 정보 + 우측 썸네일."""
+    embeds = []
+    for i, deal in enumerate(deals, 1):
+        line, meta = _deal_line(i, deal)
+        embed = {
+            "description": line + (f"\n{meta}" if meta else ""),
+            "color": color,
+        }
+        if deal.get("image_url"):
+            embed["thumbnail"] = {"url": deal["image_url"]}
+        embeds.append(embed)
+    return {
+        "thread_name": thread_name,
+        "content": "👉 오늘 TOP 10",
+        "embeds": embeds,
+    }
+
+
 # ── 공개 인터페이스 ────────────────────────────────────────────────────────
 
-STYLES = ("text", "thumb1", "thumb3")
+STYLES = ("text", "thumb1", "thumb3", "cards")
 
 
 def post_daily(date, category_id: int, category_name: str, emoji: str,
@@ -134,6 +153,8 @@ def post_daily(date, category_id: int, category_name: str, emoji: str,
         payload = _payload_text(thread_name, deals)
     elif style == "thumb3":
         payload = _payload_thumb3(thread_name, deals, color)
+    elif style == "cards":
+        payload = _payload_cards(thread_name, deals, color)
     else:  # thumb1 (기본)
         payload = _payload_thumb1(thread_name, deals, color)
 

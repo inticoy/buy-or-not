@@ -3,6 +3,9 @@ import logging
 import time
 from datetime import datetime
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from .collector import fetch_rank
 from .notifier import post_daily, STYLES
 

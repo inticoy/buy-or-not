@@ -2,18 +2,6 @@ name: 살래말래 DEV 테스트
 
 on:
   workflow_dispatch:
-    inputs:
-      style:
-        description: '포스팅 스타일'
-        required: false
-        default: 'v2'
-        type: choice
-        options:
-          - v2
-          - cards
-          - thumb1
-          - thumb3
-          - text
 
 jobs:
   post:
@@ -36,4 +24,4 @@ jobs:
           BOT_ENV: dev
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_CHANNEL_DEV: ${{ secrets.DISCORD_CHANNEL_DEV }}
-        run: python -m app run-once --style ${{ inputs.style }}
+        run: python -m app run-once

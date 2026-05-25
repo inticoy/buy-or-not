@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from .collector import fetch_rank
-from .notifier import post_daily, STYLES
+from .notifier import post_daily
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,7 +22,7 @@ CATEGORIES = [
 ]
 
 
-def run_once(dry_run: bool = False, style: str = "thumb1"):
+def run_once(dry_run: bool = False):
     now = datetime.now()
 
     for cat in CATEGORIES:
@@ -33,7 +33,7 @@ def run_once(dry_run: bool = False, style: str = "thumb1"):
             logger.warning("%s — 딜 없음", cat_name)
             continue
 
-        post_daily(now, cat_id, cat_name, emoji, deals, dry_run, style)
+        post_daily(now, cat_id, cat_name, emoji, deals, dry_run)
         logger.info("%s — 완료", cat_name)
         time.sleep(2)
 
@@ -43,11 +43,10 @@ def main():
     sub = parser.add_subparsers(dest="cmd")
     p = sub.add_parser("run-once")
     p.add_argument("--dry-run", action="store_true")
-    p.add_argument("--style", choices=STYLES, default="thumb1")
     args = parser.parse_args()
 
     if args.cmd == "run-once":
-        run_once(dry_run=args.dry_run, style=args.style)
+        run_once(dry_run=args.dry_run)
     else:
         parser.print_help()
 

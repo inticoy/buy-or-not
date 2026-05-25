@@ -2,7 +2,7 @@ name: 살래말래 일일 핫딜
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 매일 00:00 UTC = 09:00 KST
+    - cron: '0 3 * * *'  # 매일 03:00 UTC = 12:00 KST
   workflow_dispatch:
 
 jobs:

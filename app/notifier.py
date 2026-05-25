@@ -10,6 +10,7 @@ BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "")
 CHANNEL_ID = os.environ.get(f"DISCORD_CHANNEL_{_ENV.upper()}", "")
 
 API_BASE = "https://discord.com/api/v10"
+PLACEHOLDER_IMG = "https://raw.githubusercontent.com/inticoy/buy-or-not/main/assets/placeholder.png"
 
 RANK_EMOJI = {1: "🥇", 2: "🥈", 3: "🥉"}
 DAYS_KO = ["월", "화", "수", "목", "금", "토", "일"]
@@ -121,29 +122,23 @@ def _msg_v2(deals, color):
         line, meta = _deal_line(i, deal)
         content = line + (f"\n{meta}" if meta else "")
 
-        if deal.get("image_url"):
-            items.append({
-                "type": 9,  # Section
-                "components": [{"type": 10, "content": content}],
-                "accessory": {"type": 11, "media": {"url": deal["image_url"]}},
-            })
-        else:
-            items.append({"type": 10, "content": content})  # TextDisplay
+        items.append({
+            "type": 9,  # Section
+            "components": [{"type": 10, "content": content}],
+            "accessory": {"type": 11, "media": {"url": deal.get("image_url") or PLACEHOLDER_IMG}},
+        })
 
-        if i < len(deals):
-            items.append({"type": 14, "divider": True, "spacing": 1})  # Separator
 
     return {
         "flags": 32768,  # IS_COMPONENTS_V2
-        "components": [{
-            "type": 17,  # Container
-            "accent_color": color,
-            "components": [
-                {"type": 10, "content": "👉 오늘 TOP 10"},
-                {"type": 14, "divider": True, "spacing": 1},
-                *items,
-            ],
-        }],
+        "components": [
+            {"type": 10, "content": "👉 오늘 TOP 10"},
+            {
+                "type": 17,  # Container
+                "accent_color": color,
+                "components": items,
+            },
+        ],
     }
 
 

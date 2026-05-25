@@ -1,0 +1,34 @@
+name: 살래말래 일일 핫딜
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 매일 00:00 UTC = 09:00 KST
+  workflow_dispatch:      # GitHub에서 수동 실행 가능
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: DB 캐시 복원
+        uses: actions/cache@v4
+        with:
+          path: data/deals.db
+          key: deals-db-${{ github.run_id }}
+          restore-keys: deals-db-
+
+      - name: Python 세팅
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 봇 실행
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python -m app run-once

@@ -6,15 +6,18 @@ import requests
 logger = logging.getLogger(__name__)
 
 _ENV = os.environ.get("BOT_ENV", "dev")
-WEBHOOK_URL = os.environ.get(f"DISCORD_WEBHOOK_{_ENV.upper()}", "")
+BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "")
+CHANNEL_ID = os.environ.get(f"DISCORD_CHANNEL_{_ENV.upper()}", "")
+
+API_BASE = "https://discord.com/api/v10"
 
 RANK_EMOJI = {1: "🥇", 2: "🥈", 3: "🥉"}
 DAYS_KO = ["월", "화", "수", "목", "금", "토", "일"]
 
 CATEGORY_COLOR = {
-    6: 0x5865F2,  # 게임/앱  — 블루퍼플
-    2: 0x00B0F4,  # 전자/IT  — 하늘
-    3: 0xFEE75C,  # 식품/영양제 — 노랑
+    6: 0x5865F2,  # 게임  — 블루퍼플
+    2: 0x00B0F4,  # IT   — 하늘
+    3: 0xFEE75C,  # 식품  — 노랑
 }
 
 
@@ -48,10 +51,9 @@ def _build_description(deals: list) -> str:
     return "\n".join(lines).strip()
 
 
-# ── 스타일별 payload 빌더 ──────────────────────────────────────────────────
+# ── 스타일별 message 빌더 (thread_name 제외한 message 객체 반환) ──────────────
 
-def _payload_text(thread_name, deals):
-    """embed 없이 텍스트만. 제목은 bare URL."""
+def _msg_text(deals):
     lines = []
     for i, deal in enumerate(deals, 1):
         rank = RANK_EMOJI.get(i, f"{i}위")
@@ -66,36 +68,24 @@ def _payload_text(thread_name, deals):
         lines.append(f"{rank} {title} — {price}")
         if meta:
             lines.append(" · ".join(meta))
-        lines.append(f"<{url}>")  # 꺽쇠로 auto-embed 억제
+        lines.append(f"<{url}>")
         lines.append("")
-    return {
-        "thread_name": thread_name,
-        "content": "👉 오늘 TOP 10\n\n" + "\n".join(lines).strip(),
-    }
+    return {"content": "👉 오늘 TOP 10\n\n" + "\n".join(lines).strip()}
 
 
-def _payload_thumb1(thread_name, deals, color):
-    """단일 embed + 1위 썸네일."""
+def _msg_thumb1(deals, color):
     description = _build_description(deals)
     embed = {"description": description, "color": color}
     if deals and deals[0].get("image_url"):
         embed["thumbnail"] = {"url": deals[0]["image_url"]}
-    return {
-        "thread_name": thread_name,
-        "content": "👉 오늘 TOP 10",
-        "embeds": [embed],
-    }
+    return {"content": "👉 오늘 TOP 10", "embeds": [embed]}
 
 
-def _payload_thumb3(thread_name, deals, color):
-    """1~3위 각각 embed+이미지, 4~10위 텍스트 embed."""
+def _msg_thumb3(deals, color):
     embeds = []
     for i, deal in enumerate(deals[:3], 1):
         line, meta = _deal_line(i, deal)
-        embed = {
-            "description": line + (f"\n{meta}" if meta else ""),
-            "color": color,
-        }
+        embed = {"description": line + (f"\n{meta}" if meta else ""), "color": color}
         if deal.get("image_url"):
             embed["image"] = {"url": deal["image_url"]}
         embeds.append(embed)
@@ -108,68 +98,91 @@ def _payload_thumb3(thread_name, deals, color):
             if meta:
                 rest_lines.append(meta)
             rest_lines.append("")
-        embeds.append({
-            "description": "\n".join(rest_lines).strip(),
-            "color": color,
-        })
+        embeds.append({"description": "\n".join(rest_lines).strip(), "color": color})
 
-    return {
-        "thread_name": thread_name,
-        "content": "👉 오늘 TOP 10",
-        "embeds": embeds,
-    }
+    return {"content": "👉 오늘 TOP 10", "embeds": embeds}
 
 
-def _payload_cards(thread_name, deals, color):
-    """딜마다 embed 하나 — 좌측 정보 + 우측 썸네일."""
+def _msg_cards(deals, color):
     embeds = []
     for i, deal in enumerate(deals, 1):
         line, meta = _deal_line(i, deal)
-        embed = {
-            "description": line + (f"\n{meta}" if meta else ""),
-            "color": color,
-        }
+        embed = {"description": line + (f"\n{meta}" if meta else ""), "color": color}
         if deal.get("image_url"):
             embed["thumbnail"] = {"url": deal["image_url"]}
         embeds.append(embed)
+    return {"content": "👉 오늘 TOP 10", "embeds": embeds}
+
+
+def _msg_v2(deals, color):
+    """Components V2 — Container + Section (좌측 정보 + 우측 썸네일, 일정한 폭)."""
+    items = []
+    for i, deal in enumerate(deals, 1):
+        line, meta = _deal_line(i, deal)
+        content = line + (f"\n{meta}" if meta else "")
+
+        if deal.get("image_url"):
+            items.append({
+                "type": 9,  # Section
+                "components": [{"type": 10, "content": content}],
+                "accessory": {"type": 11, "media": {"url": deal["image_url"]}},
+            })
+        else:
+            items.append({"type": 10, "content": content})  # TextDisplay
+
+        if i < len(deals):
+            items.append({"type": 14, "divider": True, "spacing": 1})  # Separator
+
     return {
-        "thread_name": thread_name,
-        "content": "👉 오늘 TOP 10",
-        "embeds": embeds,
+        "flags": 32768,  # IS_COMPONENTS_V2
+        "components": [{
+            "type": 17,  # Container
+            "accent_color": color,
+            "components": [
+                {"type": 10, "content": "👉 오늘 TOP 10"},
+                {"type": 14, "divider": True, "spacing": 1},
+                *items,
+            ],
+        }],
     }
 
 
 # ── 공개 인터페이스 ────────────────────────────────────────────────────────
 
-STYLES = ("text", "thumb1", "thumb3", "cards")
+STYLES = ("text", "thumb1", "thumb3", "cards", "v2")
 
 
 def post_daily(date, category_id: int, category_name: str, emoji: str,
-               deals: list, dry_run: bool = False, style: str = "thumb1") -> str:
-    thread_name = _thread_name(date, category_name, emoji)
+               deals: list, dry_run: bool = False, style: str = "v2") -> str:
+    name = _thread_name(date, category_name, emoji)
     color = CATEGORY_COLOR.get(category_id, 0x99AAB5)
 
     if style == "text":
-        payload = _payload_text(thread_name, deals)
+        message = _msg_text(deals)
     elif style == "thumb3":
-        payload = _payload_thumb3(thread_name, deals, color)
+        message = _msg_thumb3(deals, color)
     elif style == "cards":
-        payload = _payload_cards(thread_name, deals, color)
-    else:  # thumb1 (기본)
-        payload = _payload_thumb1(thread_name, deals, color)
+        message = _msg_cards(deals, color)
+    elif style == "v2":
+        message = _msg_v2(deals, color)
+    else:  # thumb1
+        message = _msg_thumb1(deals, color)
 
     if dry_run:
         import json
-        print(f"\n[DRY RUN / style={style}] 게시글: {thread_name}")
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        print(f"\n[DRY RUN / style={style}] {name}")
+        print(json.dumps({"name": name, "message": message}, ensure_ascii=False, indent=2))
         return "DRY_THREAD_ID"
 
     resp = requests.post(
-        f"{WEBHOOK_URL}?wait=true",
-        json=payload,
+        f"{API_BASE}/channels/{CHANNEL_ID}/threads",
+        json={"name": name, "message": message},
+        headers={"Authorization": f"Bot {BOT_TOKEN}"},
         timeout=10,
     )
+    if not resp.ok:
+        logger.error("Discord error: %s", resp.text)
     resp.raise_for_status()
-    thread_id = resp.json()["channel_id"]
-    logger.info("posted: %s (thread_id=%s, style=%s)", thread_name, thread_id, style)
+    thread_id = resp.json()["id"]
+    logger.info("posted: %s (thread_id=%s, style=%s)", name, thread_id, style)
     return thread_id

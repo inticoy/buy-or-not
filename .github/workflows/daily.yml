@@ -3,7 +3,7 @@ name: 살래말래 일일 핫딜
 on:
   schedule:
     - cron: '0 0 * * *'  # 매일 00:00 UTC = 09:00 KST
-  workflow_dispatch:      # GitHub에서 수동 실행 가능
+  workflow_dispatch:
 
 jobs:
   post:
@@ -24,5 +24,6 @@ jobs:
       - name: 봇 실행
         env:
           BOT_ENV: prod
-          DISCORD_WEBHOOK_PROD: ${{ secrets.DISCORD_WEBHOOK_PROD }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CHANNEL_PROD: ${{ secrets.DISCORD_CHANNEL_PROD }}
         run: python -m app run-once

@@ -53,7 +53,7 @@ def _parse_card(card):
     # 상품 이미지 (512x512로 업스케일)
     img_el = card.select_one("div.avatar img")
     if img_el and img_el.get("src"):
-        image_url = re.sub(r'\?d=\d+x\d+$', '?d=1024x1024', img_el["src"])
+        image_url = re.sub(r'\?d=\d+x\d+$', '?d=512x512', img_el["src"])
     else:
         image_url = None
 

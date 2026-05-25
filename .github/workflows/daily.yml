@@ -26,4 +26,5 @@ jobs:
           BOT_ENV: prod
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_CHANNEL_PROD: ${{ secrets.DISCORD_CHANNEL_PROD }}
+          DISCORD_THREAD_PROD: ${{ secrets.DISCORD_THREAD_PROD }}
         run: python -m app run-once

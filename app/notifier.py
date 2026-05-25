@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 _ENV = os.environ.get("BOT_ENV", "dev")
 BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "")
 CHANNEL_ID = os.environ.get(f"DISCORD_CHANNEL_{_ENV.upper()}", "")
+THREAD_ID = os.environ.get(f"DISCORD_THREAD_{_ENV.upper()}", "")
 
 API_BASE = "https://discord.com/api/v10"
 PLACEHOLDER_IMG = "https://raw.githubusercontent.com/inticoy/buy-or-not/main/assets/placeholder.png"
@@ -41,7 +42,7 @@ def _deal_line(i, deal):
     return line, " · ".join(meta)
 
 
-def _build_message(deals, color):
+def _build_message(deals, color, header: str | None = None):
     items = []
     for i, deal in enumerate(deals, 1):
         line, meta = _deal_line(i, deal)
@@ -51,21 +52,46 @@ def _build_message(deals, color):
             "accessory": {"type": 11, "media": {"url": deal.get("image_url") or PLACEHOLDER_IMG}},
         })
 
-    return {
-        "flags": 32768,  # IS_COMPONENTS_V2
-        "components": [
-            {"type": 10, "content": "👉 오늘 TOP 10"},
-            {"type": 17, "accent_color": color, "components": items},
-        ],
-    }
+    components = []
+    if header:
+        components.append({"type": 10, "content": f"## {header}"})
+    components += [
+        {"type": 10, "content": "👉 오늘 TOP 10"},
+        {"type": 17, "accent_color": color, "components": items},
+    ]
+
+    return {"flags": 32768, "components": components}  # IS_COMPONENTS_V2
 
 
 def post_daily(date, category_id: int, category_name: str, emoji: str,
                deals: list, dry_run: bool = False) -> str:
     name = _thread_name(date, category_name, emoji)
     color = CATEGORY_COLOR.get(category_id, 0x99AAB5)
-    message = _build_message(deals, color)
 
+    if THREAD_ID:
+        # 고정 thread에 댓글로 전송
+        message = _build_message(deals, color, header=name)
+        if dry_run:
+            import json
+            print(f"\n[DRY RUN] reply to thread {THREAD_ID}: {name}")
+            print(json.dumps(message, ensure_ascii=False, indent=2))
+            return THREAD_ID
+
+        resp = requests.post(
+            f"{API_BASE}/channels/{THREAD_ID}/messages",
+            json=message,
+            headers={"Authorization": f"Bot {BOT_TOKEN}"},
+            timeout=10,
+        )
+        if not resp.ok:
+            logger.error("Discord error: %s", resp.text)
+        resp.raise_for_status()
+        msg_id = resp.json()["id"]
+        logger.info("posted reply: %s (msg_id=%s, thread_id=%s)", name, msg_id, THREAD_ID)
+        return THREAD_ID
+
+    # 포럼 채널에 새 thread 생성
+    message = _build_message(deals, color)
     if dry_run:
         import json
         print(f"\n[DRY RUN] {name}")

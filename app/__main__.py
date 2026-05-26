@@ -2,6 +2,7 @@ import argparse
 import logging
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -23,7 +24,7 @@ CATEGORIES = [
 
 
 def run_once(dry_run: bool = False):
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Seoul"))
 
     for cat in CATEGORIES:
         cat_id, cat_name, emoji = cat["id"], cat["name"], cat["emoji"]

@@ -1,6 +1,6 @@
 # v3 설계
 
-> 상태: 구현 중 (2026-10-09). 0단계 진행, 1~4단계 완료, 결정한 내용은 [결정 사항](#결정-사항)에 있습니다.
+> 상태: 운영 중 (2026-10-09). 0단계 진행, 1~4단계 완료, 5단계 남음. 결정한 내용은 [결정 사항](#결정-사항)에 있습니다. 실제 동작은 [how-it-works.md](how-it-works.md)가 기준입니다.
 
 ## 목표
 
@@ -123,8 +123,9 @@ CREATE TABLE notified (
 |---|---|
 | `add_watch(want, keywords?, max_price?, for_user?, once?)` | 관심사 등록 |
 | `remove_watch(watch, for_user?)` | 삭제. 대상자 목록에서 가장 비슷한 항목을 지우고, 애매하면 되묻기 |
-| `list_watch(for_user?)` | 관심사 목록 |
-| `show_deals(category)` | 오늘 TOP 목록 (`전체`/`게임`/`IT`/`식품`) |
+| `search_deals(query, max_price?)` | 최근 3일 딜 기록에서 검색 ("메가커피 올라왔어?"), 제목에 없으면 Gemini 판단 |
+| `list_watch(everyone?)` | 내 알림 / 전체 알림 |
+| `show_deals(category)` | TOP 목록 (`인기`/`게임`/`IT`/`식품`) |
 
 imposter-finder에는 `pubg_stats(player, matches?)` 같은 도구를 같은 방식으로 붙입니다.
 
@@ -206,7 +207,8 @@ imposter-finder에는 `pubg_stats(player, matches?)` 같은 도구를 같은 방
 |---|---|
 | 매일 TOP 10 | hotdeal.zip 인기로 교체 (특성 조사 후 확정). 카테고리별 랭킹은 요청 시 알구몬 |
 | 관심사 매칭 주기 | 60분 |
-| 알림 위치 | 지금 쓰는 핫딜 고정 thread |
+| 알림 위치 | 지금 쓰는 핫딜 고정 thread에 `@silent`로 올리고, 대상자에게는 DM |
+| 전체 알림 목록 | thread 고정 메시지 "🔔 알림 키워드"를 봇이 수정 |
 | imposter-finder와 합치기 | 당분간 따로 둠. `nl.py` 구조를 같게 만들어 나중에 합치기 쉽게 |
 
 ### 봇을 하나로 합치는 안 (보류)

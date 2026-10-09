@@ -67,15 +67,15 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
 <body>
 <main>
   <h1>살래말래 동작 흐름</h1>
-  <p class="sum">맥의 launchd가 세 가지를 돌립니다. 사이트는 평소 쓰는 Chrome을 AppleScript로 열어 읽고(챌린지 회피), 말과 판단은 Gemini가 맡습니다. (v3, 2026-10-09)</p>
+  <p class="sum">맥의 launchd가 세 가지를 돌립니다. 사이트는 평소 쓰는 Chrome을 AppleScript로 열어 읽고(챌린지 회피), 말과 판단은 Gemini가 맡습니다. 스레드 글은 모두 조용히(@silent) 가고, 알림 받을 사람에게만 DM이 갑니다. (v3, 2026-10-09)</p>
 
   <div class="legend">
     <span><i style="background:var(--neutral-bg);border-color:var(--neutral-bd)"></i>일반</span>
     <span><i style="background:var(--blue-bg);border-color:var(--blue-bd)"></i>Chrome</span>
     <span><i style="background:var(--ai-bg);border-color:var(--ai-bd)"></i>Gemini</span>
-    <span><i style="background:var(--ok-bg);border-color:var(--ok-bd)"></i>Discord 전송</span>
+    <span><i style="background:var(--ok-bg);border-color:var(--ok-bd)"></i>Discord 전송 (스레드는 조용히)</span>
+    <span><i style="background:var(--warn-bg);border-color:var(--warn-bd)"></i>DM 푸시 / 수동 조치</span>
     <span><i style="background:var(--fail-bg);border-color:var(--fail-bd)"></i>실패</span>
-    <span><i style="background:var(--warn-bg);border-color:var(--warn-bd)"></i>수동 조치</span>
   </div>
 
   <div class="cols">
@@ -91,7 +91,7 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
           <div class="br"><div class="lbl">아니오 (평소)</div>
             <div class="node">파싱 → 크로스포스트 제거 → 상위 10개</div>
             <div class="arrow"></div>
-            <div class="node n-ok">핫딜 thread에 카드 게시</div></div>
+            <div class="node n-ok">핫딜 thread에 카드 게시<small>조용히, 태그 없음</small></div></div>
           <div class="br"><div class="lbl">예</div>
             <div class="node n-fail">탭 열어둔 채 실패</div>
             <div class="arrow"></div>
@@ -117,9 +117,13 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
             <div class="node n-ai">새 딜 전체를 한 번에 물어 판단<small>고른 이유 포함</small></div></div>
         </div>
         <div class="arrow"></div>
-        <div class="node n-dec">이미 알린 딜인가?<small>가격이 내려갔으면 다시 알림</small></div>
+        <div class="node n-dec">이미 알린 딜인가?<small>같은 딜 묶음 기준. 가격이 내려갔으면 다시 알림</small></div>
         <div class="arrow"></div>
-        <div class="node n-ok">딜마다 카드 1개, 걸린 사람 모두 태그<small>"한 번만"이면 자동 해제</small></div>
+        <div class="node n-ok">thread에 카드 1개, 걸린 사람 모두 태그<small>조용히</small></div>
+        <div class="arrow"></div>
+        <div class="node n-warn">걸린 사람마다 DM 🔔<small>카드 링크 포함</small></div>
+        <div class="arrow"></div>
+        <div class="node">"한 번만"이면 자동 해제 → 알림 키워드 수정</div>
       </div>
     </section>
 
@@ -132,14 +136,22 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
         <div class="node n-ai">메시지 → 도구 선택<small>보낸 사람, 친구 목록, 기존 알림을 함께 전달</small></div>
         <div class="arrow"></div>
         <div class="branches">
-          <div class="br"><div class="lbl">알림 등록·해제·목록</div>
+          <div class="br"><div class="lbl">알림 등록·해제</div>
             <div class="node">SQLite 갱신<small>"진호한테" → people.json으로 ID</small></div>
             <div class="arrow"></div>
-            <div class="node n-ok">"🔔 알림 설정 완료!" 답장</div></div>
-          <div class="br"><div class="lbl">핫딜 보기</div>
-            <div class="node n-blue">알구몬 카테고리 / hotdeal.zip 인기</div>
+            <div class="node n-ok">"🔔 알림 설정 완료!" 답장</div>
             <div class="arrow"></div>
-            <div class="node n-ok">TOP 카드 답장</div></div>
+            <div class="node">고정 메시지 "🔔 알림 키워드" 수정</div>
+            <div class="arrow"></div>
+            <div class="node n-warn">대신 걸어줬으면 대상자에게 DM</div></div>
+          <div class="br"><div class="lbl">목록·검색·랭킹</div>
+            <div class="node">내 알림 / 전체 알림<small>이름으로 표시, 태그 없음</small></div>
+            <div class="arrow"></div>
+            <div class="node">"메가커피 올라왔어?"<small>최근 3일 딜 기록 검색, 없으면 Gemini 판단</small></div>
+            <div class="arrow"></div>
+            <div class="node n-blue">"오늘 게임 핫딜?"<small>알구몬 카테고리 / hotdeal.zip 인기</small></div>
+            <div class="arrow"></div>
+            <div class="node n-ok">카드 답장</div></div>
         </div>
         <div class="arrow"></div>
         <div class="node n-fail">Gemini 한도 초과 시<small>"오늘 AI 한도를 다 썼어요"</small></div>
@@ -165,7 +177,8 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
       <tbody>
         <tr><th>사이트</th><td>hotdeal.zip (TOP 10·관심사), 알구몬 (요청 시 카테고리 랭킹)</td></tr>
         <tr><th>AI</th><td>Gemini 무료 등급 <code>gemini-3.5-flash-lite</code> — 하루 약 24회(매칭) + 대화 수</td></tr>
-        <tr><th>저장</th><td><code>data/sallae.db</code>(관심사·딜·알림 기록), <code>data/people.json</code>(친구 이름·ID) — 커밋 안 함</td></tr>
+        <tr><th>저장</th><td><code>data/sallae.db</code>(관심사·딜·알림 기록), <code>data/people.json</code>(친구 이름·ID), <code>data/board.json</code>(알림 키워드 메시지 ID) — 커밋 안 함</td></tr>
+        <tr><th>알림</th><td>스레드 글은 전부 <code>@silent</code>. 관심사 알림·대신 걸어준 알림 안내만 대상자에게 DM (서버 멤버 DM을 막으면 실패, 로그 경고)</td></tr>
         <tr><th>조사 중</th><td><code>snapshot</code> 하루 4번 hotdeal.zip 저장 (인기 정렬 기준·범위 확인 후 제거)</td></tr>
       </tbody>
     </table>

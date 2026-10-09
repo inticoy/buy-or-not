@@ -1,5 +1,7 @@
 .env
+.venv/
 memory/
 .claude/
+logs/
 __pycache__/
 *.pyc

@@ -81,6 +81,7 @@ _COMMAND_SYSTEM = """너는 친구들 디스코드 방의 핫딜 봇 '살래말�
   '게이밍 모니터', '괜찮은 노트북'처럼 상품 종류나 조건으로만 말하면 keywords를 비워.
 - 가격은 원 단위 정수로 바꿔.
 - 알림을 끄거나 지워달라고 하면 아래 목록에서 맞는 watch_id를 골라 remove_watch를 불러.
+- "지금 뭐 알림 받게 되어있어?", "내 알림"은 list_watch. "다들/전체/모두 뭐 걸어놨어?"처럼 모든 사람 것을 물으면 list_watch(everyone=true).
 
 등록된 친구: {people}
 메시지 속 멘션: {mentions}
@@ -108,7 +109,8 @@ def _command_tools():
         _fn("remove_watch", "걸어둔 알림을 끈다.",
             {"watch_ids": {"type": "array", "items": {"type": "integer"}}}, ["watch_ids"]),
         _fn("list_watch", "걸어둔 알림 목록을 보여준다.",
-            {"for_user": {"type": "string", "description": "다른 사람 목록을 볼 때만"}}),
+            {"for_user": {"type": "string", "description": "다른 사람 목록을 볼 때만"},
+             "everyone": {"type": "boolean", "description": "모든 사람의 알림을 볼 때 true"}}),
         _fn("show_deals", "지금 핫딜 TOP 목록을 보여준다.",
             {"category": {"type": "string", "enum": ["인기", "게임", "IT", "식품"],
                           "description": "카테고리 언급이 없으면 인기"}},

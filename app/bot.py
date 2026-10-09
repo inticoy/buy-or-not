@@ -18,7 +18,8 @@ HELP = ("이렇게 말해주세요 🙂\n"
         "• `메가커피 핫딜 뜨면 알려줘`\n"
         "• `에어팟 프로 25만원 이하로 뜨면 알려줘`\n"
         "• `괜찮은 게이밍 모니터 나오면 @친구 한테 알려줘`\n"
-        "• `내 알림 목록` / `메가커피 알림 꺼줘`\n"
+        "• `지금 뭐 알림 받게 되어있어?` / `다들 뭐 걸어놨어?`\n"
+        "• `메가커피 알림 꺼줘`\n"
         "• `오늘 게임 핫딜 뭐 있어?`")
 
 
@@ -28,6 +29,18 @@ def _text(content: str, mention_ids: list | None = None) -> dict:
 
 def _won(price: int) -> str:
     return f"{price // 10000}만원" if price % 10000 == 0 else f"{price:,}원"
+
+
+def _who(discord_id: str) -> str:
+    return people.name_of(discord_id) or f"<@{discord_id}>"
+
+
+def _describe(watch: dict) -> str:
+    how = f"키워드 {', '.join(watch['keywords'])}" if watch["keywords"] else "AI 판단"
+    extra = (f" · {_won(watch['max_price'])} 이하" if watch["max_price"] else "") \
+        + (" · 한 번만" if watch["once"] else "")
+    by = f" · {_who(watch['created_by'])}님이 걸어줌" if watch["created_by"] != watch["owner_id"] else ""
+    return f"• **{watch['want']}** ({how}{extra}{by})"
 
 
 class Handler:
@@ -61,18 +74,23 @@ class Handler:
         return _text("🔕 " + ", ".join(f"'{w['want']}'" for w in removed) + " 알림을 껐어요.")
 
     def list_watch(self, sender: str, args: dict) -> dict:
+        # 목록 안의 멘션은 이름처럼 보이기만 하고 알림은 가지 않는다 (allowed_mentions 비움)
+        watches = self.store.active_watches()
+        if args.get("everyone"):
+            if not watches:
+                return _text("아직 아무도 알림을 걸어두지 않았어요.")
+            owners = list(dict.fromkeys(w["owner_id"] for w in watches))
+            blocks = [f"**{_who(o)}**\n" + "\n".join(_describe(w) for w in watches if w["owner_id"] == o)
+                      for o in owners]
+            return _text(f"🔔 지금 걸려 있는 알림 {len(watches)}개예요\n\n" + "\n\n".join(blocks))
+
         who = people.resolve(args["for_user"]) if args.get("for_user") else sender
         if who is None:
             return _text(f"'{args['for_user']}'님이 누군지 모르겠어요.")
-        watches = [w for w in self.store.active_watches() if w["owner_id"] == who]
-        if not watches:
-            return _text(f"<@{who}>님은 아직 걸어둔 알림이 없어요.")
-        lines = []
-        for i, w in enumerate(watches, 1):
-            how = f"키워드 {', '.join(w['keywords'])}" if w["keywords"] else "AI 판단"
-            extra = (f" · {_won(w['max_price'])} 이하" if w["max_price"] else "") + (" · 한 번만" if w["once"] else "")
-            lines.append(f"{i}. **{w['want']}** ({how}{extra})")
-        return _text(f"🔔 <@{who}>님이 받는 알림이에요\n" + "\n".join(lines))
+        mine = [w for w in watches if w["owner_id"] == who]
+        if not mine:
+            return _text(f"{_who(who)}님은 아직 걸어둔 알림이 없어요.")
+        return _text(f"🔔 {_who(who)}님이 받는 알림이에요\n" + "\n".join(_describe(w) for w in mine))
 
     def show_deals(self, sender: str, args: dict) -> dict:
         category = args.get("category", "인기")

@@ -80,16 +80,21 @@ class ChallengeRequired(BrowserFetchError):
 
 
 def _osa(script: str, *args: str) -> str:
-    try:
-        result = subprocess.run(
-            ["osascript", "-", *args],
-            input=script, capture_output=True, text=True, timeout=OSA_TIMEOUT_S,
-        )
-    except subprocess.TimeoutExpired as e:
-        raise BrowserFetchError("osascript timed out") from e
-    if result.returncode != 0:
-        raise BrowserFetchError(result.stderr.strip())
-    return result.stdout.rstrip("\n")
+    for attempt in range(3):
+        try:
+            result = subprocess.run(
+                ["osascript", "-", *args],
+                input=script, capture_output=True, text=True, timeout=OSA_TIMEOUT_S,
+            )
+        except subprocess.TimeoutExpired as e:
+            raise BrowserFetchError("osascript timed out") from e
+        # -609: `open -na`가 잠깐 띄운 두 번째 Chrome 프로세스에 붙었다 끊긴 경우. 곧 풀린다.
+        if result.returncode != 0 and "(-609)" in result.stderr and attempt < 2:
+            time.sleep(1.5)
+            continue
+        if result.returncode != 0:
+            raise BrowserFetchError(result.stderr.strip())
+        return result.stdout.rstrip("\n")
 
 
 class ChromeTab:

@@ -22,8 +22,12 @@ def resolve(who: str) -> str | None:
     mention = re.fullmatch(r"<@!?(\d+)>", who.strip())
     if mention:
         return mention.group(1)
-    who = who.strip().removesuffix("님")
+    who = who.strip().removesuffix("님").lower()
     for person in load():
-        if who == person["name"] or who in person.get("aliases", []):
+        if who in [person["name"].lower(), *(a.lower() for a in person.get("aliases", []))]:
             return person["discord_id"]
     return None
+
+
+def name_of(discord_id: str) -> str | None:
+    return next((p["name"] for p in load() if p["discord_id"] == discord_id), None)

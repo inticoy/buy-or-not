@@ -13,10 +13,11 @@ load_dotenv()
 
 import requests
 
-from . import hotdealzip
+from . import hotdealzip, matcher
 from .browser import BrowserFetchError, fetch_html
 from .collector import _deduplicate_deals, fetch_rank
-from .notifier import post_daily
+from .notifier import post_alert, post_daily
+from .store import Store
 
 logging.basicConfig(
     level=logging.INFO,
@@ -88,6 +89,36 @@ def run_once(source: str = "hotdeal", dry_run: bool = False) -> bool:
     return not failed
 
 
+def run_watch(dry_run: bool = False, deals: list | None = None, store: Store | None = None) -> bool:
+    """hotdeal.zip 최신 딜을 훑어 관심사에 맞으면 대상자를 태그해 알린다."""
+    store = store or Store()
+    if deals is None:
+        try:
+            deals = hotdealzip.fetch_latest(pages=3)
+        except BrowserFetchError as e:
+            logger.error("hotdeal.zip fetch failed: %s", e)
+            return False
+
+    # 첫 실행에 지난 딜이 한꺼번에 알림으로 가지 않도록 기록만 한다
+    first_run = store.is_empty()
+    new = store.record_deals("hotdealzip", deals)
+    logger.info("watch: %d deals, %d new", len(deals), len(new))
+    if first_run:
+        logger.info("watch: first run — recorded only")
+        return True
+
+    for watch, deal, reason in matcher.match(store.active_watches(), new):
+        kind = store.notify_kind(watch["id"], deal["group_key"], deal.get("price"))
+        if kind is None:
+            continue
+        post_alert(watch["owner_id"], watch["want"], deal, reason, kind == "drop", dry_run)
+        if not dry_run:
+            store.mark_notified(watch["id"], deal["group_key"], deal.get("price"))
+            if watch["once"]:
+                store.deactivate(watch["id"])
+    return True
+
+
 def snapshot(out_dir: str = "data/snapshots"):
     """hotdeal.zip 인기·최신 HTML을 저장한다 (v3 소스 특성 조사용)."""
     stamp = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y%m%d-%H%M")
@@ -108,10 +139,31 @@ def main():
     p.add_argument("--source", choices=BOARDS, default="hotdeal")
     p.add_argument("--dry-run", action="store_true")
     sub.add_parser("snapshot")
+    p = sub.add_parser("watch", help="최신 딜을 훑어 관심사 알림 (60분마다)")
+    p.add_argument("--dry-run", action="store_true")
+    p = sub.add_parser("watch-add", help="관심사 직접 등록")
+    p.add_argument("--owner", required=True, help="알림 받을 사람 Discord ID")
+    p.add_argument("--want", required=True, help="관심사 설명")
+    p.add_argument("--keywords", nargs="+", help="정확한 상품명. 없으면 Gemini가 판단")
+    p.add_argument("--max-price", type=int)
+    p.add_argument("--once", action="store_true")
+    p.add_argument("--by", help="등록한 사람 Discord ID (대신 등록할 때)")
+    sub.add_parser("watch-list")
     args = parser.parse_args()
 
     if args.cmd == "snapshot":
         snapshot()
+    elif args.cmd == "watch":
+        if not run_watch(dry_run=args.dry_run):
+            sys.exit(1)
+    elif args.cmd == "watch-add":
+        watch_id = Store().add_watch(args.owner, args.want, args.keywords, args.max_price,
+                                     args.once, args.by)
+        print(f"watch #{watch_id} added")
+    elif args.cmd == "watch-list":
+        for w in Store().active_watches():
+            print(f"#{w['id']} <@{w['owner_id']}> {w['want']} keywords={w['keywords']}"
+                  f" max_price={w['max_price']} once={bool(w['once'])}")
     elif args.cmd == "run-once":
         ok = run_once(source=args.source, dry_run=args.dry_run)
         if not args.dry_run:

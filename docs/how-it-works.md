@@ -24,6 +24,16 @@ launchd (매일 12:00 KST)
 
 `app/__main__.py`의 `BOARDS`에서 바꿉니다.
 
+## 관심사 알림
+
+매시 30분에 `python -m app watch`가 hotdeal.zip 최신 75개를 읽어, 처음 보는 딜을 관심사와 대조합니다.
+
+- **키워드가 있는 관심사:** 키워드의 단어가 제목에 모두 있으면 매칭 (`matcher.py`)
+- **설명형 관심사:** 새 딜 목록과 함께 Gemini에 한 번 물어 판단 (`nl.py`, 기본 `gemini-3.5-flash-lite`). 실패하면 키워드 매칭만 돕니다.
+- 여러 커뮤니티의 같은 딜은 묶어서 1번만, 이미 알린 딜은 가격이 내려가면 다시 알립니다.
+- 알림은 핫딜 고정 thread에 대상자만 태그해서 보냅니다.
+- 데이터는 `data/sallae.db`(SQLite, 커밋 안 함). 첫 실행은 지난 딜을 기록만 합니다.
+
 ## 알구몬 접근
 
 hotdeal.zip은 Cloudflare, 알구몬은 자체 Turnstile 챌린지를 씁니다. 알구몬은 의심스러운 요청에 Cloudflare Turnstile 챌린지(403 `CHALLENGE_REQUIRED`)를 겁니다. 챌린지는 항상 켜져 있지 않고, 같은 IP에서 자동화 요청이 몰리면 한동안 켜졌다가 풀립니다.
@@ -48,6 +58,8 @@ launchctl print gui/$(id -u)/com.inticoy.buy-or-not   # 상태
 tail -f logs/buy-or-not.log logs/buy-or-not-error.log  # 로그
 launchctl kickstart gui/$(id -u)/com.inticoy.buy-or-not  # 즉시 실행 (PROD 게시됨)
 ```
+
+관심사 알림은 `com.inticoy.buy-or-not.watch`(매시 30분, 로그 `logs/watch.log`)가 돌립니다.
 
 v3 소스 조사용으로 `com.inticoy.buy-or-not.snapshot`이 하루 4번(09·15·21·23:50) hotdeal.zip 인기 HTML과 최신 목록을 `data/snapshots/`에 저장합니다. 조사가 끝나면 지웁니다.
 

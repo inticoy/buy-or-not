@@ -111,3 +111,39 @@ def post_daily(date, category_id: int | str, category_name: str, emoji: str,
     thread_id = resp.json()["id"]
     logger.info("posted: %s (thread_id=%s)", name, thread_id)
     return thread_id
+
+
+def post_alert(owner_id: str, watch_want: str, deal: dict, reason: str | None = None,
+               price_drop: bool = False, dry_run: bool = False) -> None:
+    """관심사에 맞는 딜을 핫딜 thread에 대상자 태그와 함께 보낸다."""
+    price = deal.get("price_str") or "가격 미확인"
+    if deal.get("price") is None and deal.get("price_str"):
+        price += " (가격 확인 필요)"
+    meta = " · ".join(x for x in (deal.get("shop"), deal.get("community")) if x)
+    lines = [
+        f"<@{owner_id}> 🔔 **{watch_want}**" + (" — 가격 인하" if price_drop else ""),
+        f"**[{deal['title']}]({deal['url']})** — {price}",
+    ]
+    if meta:
+        lines.append(meta)
+    if reason:
+        lines.append(f"💬 {reason}")
+    message = {
+        "content": "\n".join(lines),
+        "allowed_mentions": {"users": [owner_id]},  # 대상자만 알림이 가게
+        "flags": 4,  # SUPPRESS_EMBEDS: 링크 미리보기 카드 숨김
+    }
+    if dry_run:
+        print(f"\n[DRY RUN] alert → {message['content']}")
+        return
+
+    resp = requests.post(
+        f"{API_BASE}/channels/{THREAD_ID or CHANNEL_ID}/messages",
+        json=message,
+        headers={"Authorization": f"Bot {BOT_TOKEN}"},
+        timeout=10,
+    )
+    if not resp.ok:
+        logger.error("Discord error: %s", resp.text)
+    resp.raise_for_status()
+    logger.info("alert sent: %s → %s", watch_want, deal["title"])

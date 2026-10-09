@@ -1,6 +1,6 @@
 # 살래말래
 
-hotdeal.zip 인기 핫딜 TOP 10을 매일 12:00 KST에 Discord로 보내는 봇입니다.
+hotdeal.zip 인기 핫딜 TOP 10을 매일 12:00 KST에 Discord로 보내고, 친구들이 등록한 관심사에 맞는 딜이 올라오면 태그해서 알려주는 봇입니다.
 
 동작 방식과 버전별 계획은 [docs/](docs/)에 있습니다.
 
@@ -32,11 +32,22 @@ cp .env.example .env   # 토큰·채널 ID 채우기
 .venv/bin/python -m unittest discover -s tests
 ```
 
+**관심사 알림** (자연어 등록은 v3에서 추가 예정)
+
+```bash
+.venv/bin/python -m app watch-add --owner <Discord ID> --want "메가커피" --keywords 메가커피
+.venv/bin/python -m app watch-add --owner <Discord ID> --want "게이밍 모니터"   # 키워드 없으면 Gemini가 판단
+.venv/bin/python -m app watch-list
+.venv/bin/python -m app watch --dry-run   # 최신 딜을 훑어 알림 대상만 출력
+```
+
 ## 자동 실행 (launchd)
 
 ```bash
-cp ops/launchd/com.inticoy.buy-or-not.plist ~/Library/LaunchAgents/
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.inticoy.buy-or-not.plist
+for job in buy-or-not buy-or-not.watch; do
+  cp ops/launchd/com.inticoy.$job.plist ~/Library/LaunchAgents/
+  launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.inticoy.$job.plist
+done
 ```
 
-매일 12:00에 PROD로 게시합니다. 처음 실행할 때 뜨는 "Chrome 제어" 권한 팝업을 허용해야 합니다.
+매일 12:00에 TOP 10을, 매시 30분에 관심사 알림을 PROD로 보냅니다. 처음 실행할 때 뜨는 "Chrome 제어" 권한 팝업을 허용해야 합니다.

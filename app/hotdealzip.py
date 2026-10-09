@@ -9,7 +9,8 @@ from urllib.parse import quote
 
 from bs4 import BeautifulSoup
 
-from .browser import ChromeTab, fetch_html
+from .browser import BrowserFetchError, ChromeTab, fetch_html
+from .collector import _deduplicate_deals
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,16 @@ _ITEMS_JS = "document.querySelectorAll('a.deal-item').length"
 def fetch_popular() -> list:
     """오늘 인기 딜 (첫 화면 약 25개)."""
     return parse_deals(fetch_html(POPULAR_URL))
+
+
+def top10() -> list:
+    """오늘 인기에서 크로스포스트를 뺀 상위 10개. 못 가져오면 []."""
+    try:
+        deals = fetch_popular()
+    except BrowserFetchError as e:
+        logger.error("hotdeal.zip fetch failed: %s", e)
+        return []
+    return _deduplicate_deals(deals)[:10]
 
 
 def fetch_latest(pages: int = 3) -> list:
@@ -63,6 +74,7 @@ def parse_deals(html: str) -> list:
             "recommend": None,
             "comments": _to_int(text(".deal-comment-count")),
             "posted_at": text(".deal-time"),
+            "ago": text(".relative-time"),  # 예: "3분전"
             "image_url": image.get("src") if image else None,
         })
     return deals

@@ -113,32 +113,15 @@ def post_daily(date, category_id: int | str, category_name: str, emoji: str,
     return thread_id
 
 
-def post_alert(owner_id: str, watch_want: str, deal: dict, reason: str | None = None,
-               price_drop: bool = False, dry_run: bool = False) -> None:
-    """관심사에 맞는 딜을 핫딜 thread에 대상자 태그와 함께 보낸다."""
-    price = deal.get("price_str") or "가격 미확인"
-    if deal.get("price") is None and deal.get("price_str"):
-        price += " (가격 확인 필요)"
-    meta = " · ".join(x for x in (deal.get("shop"), deal.get("community")) if x)
-    lines = [
-        f"<@{owner_id}> 🔔 **{watch_want}**" + (" — 가격 인하" if price_drop else ""),
-        f"**[{deal['title']}]({deal['url']})** — {price}",
-    ]
-    if meta:
-        lines.append(meta)
-    if reason:
-        lines.append(f"💬 {reason}")
-    message = {
-        "content": "\n".join(lines),
-        "allowed_mentions": {"users": [owner_id]},  # 대상자만 알림이 가게
-        "flags": 4,  # SUPPRESS_EMBEDS: 링크 미리보기 카드 숨김
-    }
-    if dry_run:
-        print(f"\n[DRY RUN] alert → {message['content']}")
-        return
+ALERT_COLOR = 0xF0B232  # 관심사 알림 — 주황
 
+
+def send_message(channel_id: str, message: dict, reply_to: str | None = None) -> str:
+    """Post a raw message payload and return its id."""
+    if reply_to:
+        message = message | {"message_reference": {"message_id": reply_to, "fail_if_not_exists": False}}
     resp = requests.post(
-        f"{API_BASE}/channels/{THREAD_ID or CHANNEL_ID}/messages",
+        f"{API_BASE}/channels/{channel_id}/messages",
         json=message,
         headers={"Authorization": f"Bot {BOT_TOKEN}"},
         timeout=10,
@@ -146,4 +129,51 @@ def post_alert(owner_id: str, watch_want: str, deal: dict, reason: str | None = 
     if not resp.ok:
         logger.error("Discord error: %s", resp.text)
     resp.raise_for_status()
-    logger.info("alert sent: %s → %s", watch_want, deal["title"])
+    return resp.json()["id"]
+
+
+def _mentions(user_ids: list) -> str:
+    return ", ".join(f"<@{uid}>님" for uid in user_ids)
+
+
+def build_alert(hits: list, deal: dict) -> dict:
+    """hits: [{"owner_id", "want", "reason", "price_drop"}] — 같은 딜에 걸린 관심사들."""
+    owners = list(dict.fromkeys(h["owner_id"] for h in hits))
+    where = deal.get("shop") or deal.get("community") or "커뮤니티"
+    ago = f" ({deal['ago']})" if deal.get("ago") else ""
+    drop = " 가격이 더 내려갔어요!" if any(h.get("price_drop") for h in hits) else ""
+    headline = f"{_mentions(owners)}, {where}에서 **{deal['title']}** 핫딜이 떴어요!{drop}{ago}"
+
+    price = deal.get("price_str") or "가격 미확인"
+    if deal.get("price") is None and deal.get("price_str"):
+        price += " (가격 확인 필요)"
+    meta = " · ".join(x for x in (deal.get("shop"), deal.get("community"), deal.get("category")) if x)
+    body = f"### [{deal['title']}]({deal['url']})\n💰 **{price}**" + (f"\n{meta}" if meta else "")
+    watched = " / ".join(dict.fromkeys(f"'{h['want']}'" for h in hits))
+    reasons = [f"💬 {h['reason']}" for h in hits if h.get("reason")]
+    footer = "\n".join(reasons + [f"-# 🔔 {watched} 알림"])
+
+    card = {"type": 10, "content": body}
+    if deal.get("image_url"):
+        card = {"type": 9, "components": [card],
+                "accessory": {"type": 11, "media": {"url": deal["image_url"]}}}
+    return {
+        "flags": 32768,  # IS_COMPONENTS_V2
+        "components": [
+            {"type": 10, "content": headline},
+            {"type": 17, "accent_color": ALERT_COLOR, "components": [
+                card, {"type": 14}, {"type": 10, "content": footer},
+            ]},
+        ],
+        "allowed_mentions": {"users": owners},  # 대상자만 알림이 가게
+    }
+
+
+def post_alert(hits: list, deal: dict, dry_run: bool = False) -> None:
+    """관심사에 맞는 딜을 핫딜 thread에 대상자 태그와 함께 보낸다."""
+    message = build_alert(hits, deal)
+    if dry_run:
+        print(f"\n[DRY RUN] alert → {message['components'][0]['content']}")
+        return
+    send_message(THREAD_ID or CHANNEL_ID, message)
+    logger.info("alert sent: %s → %s", [h["want"] for h in hits], deal["title"])

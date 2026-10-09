@@ -34,6 +34,21 @@ launchd (매일 12:00 KST)
 - 알림은 핫딜 고정 thread에 대상자만 태그해서 보냅니다.
 - 데이터는 `data/sallae.db`(SQLite, 커밋 안 함). 첫 실행은 지난 딜을 기록만 합니다.
 
+## @멘션 봇
+
+`python -m app serve`(launchd `com.inticoy.buy-or-not.serve`, 상주)가 봇을 멘션한 메시지를 받아 Gemini로 동작을 고릅니다 (`bot.py`, `nl.parse_command`).
+
+| 말하면 | 동작 |
+|---|---|
+| 메가커피 핫딜 뜨면 알려줘 | 키워드 알림 등록 + "알림 설정 완료" 답장 |
+| 게이밍 모니터 50만원 이하 뜨면 @진호 한테 한 번만 알려줘 | 진호에게 AI 판단 알림 등록, 진호 태그로 안내 |
+| 내 알림 목록 / 메가커피 알림 꺼줘 | 목록 / 해제 |
+| 오늘 게임 핫딜 뭐 있어? | 알구몬 게임 랭킹 카드 (카테고리 없으면 hotdeal.zip 인기) |
+
+- 멘션된 메시지만 읽어서 Message Content 특수 권한이 필요 없습니다.
+- 같은 딜에 여러 사람의 관심사가 걸리면 메시지 하나로 모두 태그합니다.
+- Gemini 한도를 넘으면 "오늘 AI 한도를 다 썼어요"라고 답합니다.
+
 ## 알구몬 접근
 
 hotdeal.zip은 Cloudflare, 알구몬은 자체 Turnstile 챌린지를 씁니다. 알구몬은 의심스러운 요청에 Cloudflare Turnstile 챌린지(403 `CHALLENGE_REQUIRED`)를 겁니다. 챌린지는 항상 켜져 있지 않고, 같은 IP에서 자동화 요청이 몰리면 한동안 켜졌다가 풀립니다.

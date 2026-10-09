@@ -32,7 +32,10 @@ cp .env.example .env   # 토큰·채널 ID 채우기
 .venv/bin/python -m unittest discover -s tests
 ```
 
-**관심사 알림** (자연어 등록은 v3에서 추가 예정)
+**관심사 알림**
+
+디스코드에서 봇을 `@살래말래`로 멘션하고 말하면 됩니다. 예: `@살래말래 메가커피 핫딜 뜨면 알려줘`, `@살래말래 게이밍 모니터 50만원 이하 뜨면 @진호 한테 알려줘`, `@살래말래 내 알림 목록`.
+이름으로 다른 사람을 부르려면 `data/people.json`에 이름·별명·Discord ID를 넣습니다(커밋 안 함). 명령어로 직접 등록할 수도 있습니다.
 
 ```bash
 .venv/bin/python -m app watch-add --owner <Discord ID> --want "메가커피" --keywords 메가커피
@@ -44,10 +47,10 @@ cp .env.example .env   # 토큰·채널 ID 채우기
 ## 자동 실행 (launchd)
 
 ```bash
-for job in buy-or-not buy-or-not.watch; do
+for job in buy-or-not buy-or-not.watch buy-or-not.serve; do
   cp ops/launchd/com.inticoy.$job.plist ~/Library/LaunchAgents/
   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.inticoy.$job.plist
 done
 ```
 
-매일 12:00에 TOP 10을, 매시 30분에 관심사 알림을 PROD로 보냅니다. 처음 실행할 때 뜨는 "Chrome 제어" 권한 팝업을 허용해야 합니다.
+매일 12:00에 TOP 10을, 매시 30분에 관심사 알림을 PROD로 보냅니다. `serve`는 `@멘션`에 답하는 상주 봇입니다. 처음 실행할 때 뜨는 "Chrome 제어" 권한 팝업을 허용해야 합니다.

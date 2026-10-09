@@ -51,7 +51,8 @@ def _now() -> str:
 class Store:
     def __init__(self, path: Path | str = DB_PATH):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(path)
+        # watch(launchd)와 serve가 같은 DB를 쓰므로 잠금을 잠시 기다린다
+        self.db = sqlite3.connect(path, timeout=10, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(_SCHEMA)
 
@@ -73,6 +74,10 @@ class Store:
         rows = self.db.execute("SELECT * FROM watches WHERE active = 1 ORDER BY id").fetchall()
         return [{**dict(row), "keywords": json.loads(row["keywords"]) if row["keywords"] else None}
                 for row in rows]
+
+    def related_watches(self, user_id: str) -> list[dict]:
+        """그 사람이 받는 알림과 그 사람이 남에게 걸어준 알림."""
+        return [w for w in self.active_watches() if user_id in (w["owner_id"], w["created_by"])]
 
     def deactivate(self, watch_id: int):
         self.db.execute("UPDATE watches SET active = 0 WHERE id = ?", (watch_id,))

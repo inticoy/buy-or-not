@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.inticoy.buy-or-not.serve</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/inticoy/GitHub/inticoy/buy-or-not/.venv/bin/python</string>
+    <string>-m</string>
+    <string>app</string>
+    <string>serve</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/inticoy/GitHub/inticoy/buy-or-not</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>BOT_ENV</key>
+    <string>prod</string>
+    <key>PYTHONUNBUFFERED</key>
+    <string>1</string>
+  </dict>
+  <!-- @멘션 자연어 봇: 로그인 시 시작, 죽으면 다시 시작 -->
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>StandardOutPath</key>
+  <string>/Users/inticoy/GitHub/inticoy/buy-or-not/logs/serve.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/inticoy/GitHub/inticoy/buy-or-not/logs/serve.log</string>
+</dict>
+</plist>

@@ -15,7 +15,7 @@ import requests
 
 from . import hotdealzip, matcher
 from .browser import BrowserFetchError, fetch_html
-from .collector import _deduplicate_deals, fetch_rank
+from .collector import fetch_rank
 from .notifier import post_alert, post_daily
 from .store import Store
 
@@ -25,19 +25,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def _hotdeal_top10() -> list:
-    try:
-        deals = hotdealzip.fetch_popular()
-    except BrowserFetchError as e:
-        logger.error("hotdeal.zip fetch failed: %s", e)
-        return []
-    return _deduplicate_deals(deals)[:10]
-
-
 # 게시판마다 한 메시지. id는 메시지 컬러 키로 쓴다.
 BOARDS = {
     "hotdeal": [
-        {"id": "hot", "name": "인기", "emoji": "🔥", "fetch": _hotdeal_top10},
+        {"id": "hot", "name": "인기", "emoji": "🔥", "fetch": hotdealzip.top10},
     ],
     "algumon": [
         {"id": 6, "name": "게임", "emoji": "🎮", "fetch": lambda: fetch_rank(6)},
@@ -107,15 +98,25 @@ def run_watch(dry_run: bool = False, deals: list | None = None, store: Store | N
         logger.info("watch: first run — recorded only")
         return True
 
+    # 같은 딜에 걸린 관심사(여러 사람 포함)는 메시지 하나로 모은다
+    hits_by_deal = {}
     for watch, deal, reason in matcher.match(store.active_watches(), new):
         kind = store.notify_kind(watch["id"], deal["group_key"], deal.get("price"))
         if kind is None:
             continue
-        post_alert(watch["owner_id"], watch["want"], deal, reason, kind == "drop", dry_run)
-        if not dry_run:
-            store.mark_notified(watch["id"], deal["group_key"], deal.get("price"))
-            if watch["once"]:
-                store.deactivate(watch["id"])
+        _, hits = hits_by_deal.setdefault(deal["group_key"], (deal, []))
+        if all(h["watch"]["id"] != watch["id"] for h in hits):  # 한 번에 들어온 크로스포스트
+            hits.append({"watch": watch, "owner_id": watch["owner_id"], "want": watch["want"],
+                         "reason": reason, "price_drop": kind == "drop"})
+
+    for deal, hits in hits_by_deal.values():
+        post_alert(hits, deal, dry_run)
+        if dry_run:
+            continue
+        for hit in hits:
+            store.mark_notified(hit["watch"]["id"], deal["group_key"], deal.get("price"))
+            if hit["watch"]["once"]:
+                store.deactivate(hit["watch"]["id"])
     return True
 
 
@@ -149,9 +150,13 @@ def main():
     p.add_argument("--once", action="store_true")
     p.add_argument("--by", help="등록한 사람 Discord ID (대신 등록할 때)")
     sub.add_parser("watch-list")
+    sub.add_parser("serve", help="@멘션 자연어 봇 (상주)")
     args = parser.parse_args()
 
-    if args.cmd == "snapshot":
+    if args.cmd == "serve":
+        from .bot import run
+        run()
+    elif args.cmd == "snapshot":
         snapshot()
     elif args.cmd == "watch":
         if not run_watch(dry_run=args.dry_run):

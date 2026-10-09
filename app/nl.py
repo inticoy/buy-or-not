@@ -3,6 +3,8 @@ import json
 import logging
 import os
 
+from . import people
+
 logger = logging.getLogger(__name__)
 
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
@@ -70,3 +72,74 @@ def judge(watches: list, deals: list) -> list[dict]:
     except Exception as e:  # 한도 초과 등: 키워드 매칭은 계속 돌도록 삼킨다
         logger.error("gemini judge failed: %s", e)
         return []
+
+
+_COMMAND_SYSTEM = """너는 친구들 디스코드 방의 핫딜 봇 '살래말래'야.
+사용자의 말을 보고 맞는 도구를 호출해. 맞는 도구가 없으면 도구 없이 한두 문장으로 친근하게 답해.
+- '나', '내'는 보낸 사람이다. 다른 사람에게 알려달라고 하면 for_user에 그 사람을 넣어. 멘션(<@숫자>)은 그대로 넣어.
+- 브랜드·상품명이 있으면 keywords에 넣어. 예: 메가커피 → ["메가커피"], 에어팟 프로 → ["에어팟 프로"], 스위치2나 프로콘 → ["스위치2", "프로콘"].
+  '게이밍 모니터', '괜찮은 노트북'처럼 상품 종류나 조건으로만 말하면 keywords를 비워.
+- 가격은 원 단위 정수로 바꿔.
+- 알림을 끄거나 지워달라고 하면 아래 목록에서 맞는 watch_id를 골라 remove_watch를 불러.
+
+등록된 친구: {people}
+메시지 속 멘션: {mentions}
+보낸 사람이 관련된 알림 목록: {watches}"""
+
+
+def _fn(name, description, properties, required=()):
+    from google.genai import types
+    return types.FunctionDeclaration(
+        name=name, description=description,
+        parameters_json_schema={"type": "object", "properties": properties, "required": list(required)},
+    )
+
+
+def _command_tools():
+    from google.genai import types
+    return [types.Tool(function_declarations=[
+        _fn("add_watch", "핫딜 알림을 건다. 맞는 딜이 올라오면 대상자를 태그해 알린다.",
+            {"want": {"type": "string", "description": "원하는 상품을 짧게 설명 (예: 메가커피, 게이밍 모니터)"},
+             "keywords": {"type": "array", "items": {"type": "string"}, "description": "정확한 상품명들. 종류로 말하면 생략"},
+             "max_price": {"type": "integer", "description": "이 가격(원) 이하만. 언급 없으면 생략"},
+             "for_user": {"type": "string", "description": "알림 받을 사람(이름 또는 <@id>). 본인이면 생략"},
+             "once": {"type": "boolean", "description": "한 번만 알리고 끌지. 언급 없으면 생략"}},
+            ["want"]),
+        _fn("remove_watch", "걸어둔 알림을 끈다.",
+            {"watch_ids": {"type": "array", "items": {"type": "integer"}}}, ["watch_ids"]),
+        _fn("list_watch", "걸어둔 알림 목록을 보여준다.",
+            {"for_user": {"type": "string", "description": "다른 사람 목록을 볼 때만"}}),
+        _fn("show_deals", "지금 핫딜 TOP 목록을 보여준다.",
+            {"category": {"type": "string", "enum": ["인기", "게임", "IT", "식품"],
+                          "description": "카테고리 언급이 없으면 인기"}},
+            ["category"]),
+    ])]
+
+
+class QuotaExceeded(Exception):
+    pass
+
+
+def parse_command(sender: str, text: str, mentions: dict, watches: list) -> dict:
+    """Turn a chat message into tool calls. Returns {"calls": [(name, args)], "reply": str | None}."""
+    from google.genai import errors, types
+
+    system = _COMMAND_SYSTEM.format(
+        people=people.names_for_prompt(),
+        mentions=json.dumps(mentions, ensure_ascii=False) or "없음",
+        watches=json.dumps([{"watch_id": w["id"], "owner": f"<@{w['owner_id']}>", "want": w["want"]}
+                            for w in watches], ensure_ascii=False),
+    )
+    try:
+        resp = _client().models.generate_content(
+            model=MODEL, contents=f"보낸 사람: {sender}\n메시지: {text}",
+            config=types.GenerateContentConfig(
+                system_instruction=system, tools=_command_tools(),
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)),
+        )
+    except errors.ClientError as e:
+        if e.code == 429:
+            raise QuotaExceeded() from e
+        raise
+    calls = [(c.name, dict(c.args or {})) for c in (resp.function_calls or [])]
+    return {"calls": calls, "reply": None if calls else (resp.text or "").strip()}

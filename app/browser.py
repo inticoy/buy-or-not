@@ -61,7 +61,14 @@ on run argv
 end run
 '''
 
-_STATUS_JS = "location.pathname + '\\n' + document.readyState"
+_STATUS_JS = "location.pathname + '\\n' + document.readyState + '\\n' + document.title"
+
+# 알구몬은 /n/challenge로 보내고, Cloudflare는 주소 그대로 제목만 바꾼다
+_CHALLENGE_TITLES = ("Just a moment", "잠시만 기다리")
+
+
+def _is_challenge(path: str, title: str) -> bool:
+    return "/challenge" in path or any(t in title for t in _CHALLENGE_TITLES)
 
 
 class BrowserFetchError(Exception):
@@ -85,44 +92,76 @@ def _osa(script: str, *args: str) -> str:
     return result.stdout.rstrip("\n")
 
 
-def fetch_html(url: str, timeout: float = 45) -> str:
-    """Open url in Chrome, wait until it finishes loading off the challenge page, and return the HTML.
+class ChromeTab:
+    """A Chrome tab opened in the user's profile, usable as a context manager.
 
     On a challenge page the tab is left open so it can be solved by hand.
     """
-    # fragment는 서버로 전송되지 않고 리다이렉트 후에도 유지돼 탭을 찾는 표식으로 쓴다
-    tag = f"sallae-{uuid.uuid4().hex[:8]}"
-    subprocess.run(
-        ["open", "-na", "Google Chrome", "--args",
-         f"--profile-directory={CHROME_PROFILE}", f"{url}#{tag}"],
-        check=True, timeout=OSA_TIMEOUT_S,
-    )
 
-    deadline = time.monotonic() + timeout
-    tab_id = ""
-    while not tab_id:
-        if time.monotonic() > deadline:
-            raise BrowserFetchError(f"Chrome tab did not open: {url}")
-        time.sleep(0.5)
-        tab_id = _osa(_FIND_TAB, tag)
+    def __init__(self, url: str, timeout: float = 45):
+        self.url = url
+        self.timeout = timeout
+        self.tab_id = ""
+        self._keep_open = False
 
-    path = ""
-    try:
+    def __enter__(self) -> "ChromeTab":
+        # fragment는 서버로 전송되지 않고 리다이렉트 후에도 유지돼 탭을 찾는 표식으로 쓴다
+        tag = f"sallae-{uuid.uuid4().hex[:8]}"
+        subprocess.run(
+            ["open", "-na", "Google Chrome", "--args",
+             f"--profile-directory={CHROME_PROFILE}", f"{self.url}#{tag}"],
+            check=True, timeout=OSA_TIMEOUT_S,
+        )
+        deadline = time.monotonic() + self.timeout
+        while not self.tab_id:
+            if time.monotonic() > deadline:
+                raise BrowserFetchError(f"Chrome tab did not open: {self.url}")
+            time.sleep(0.5)
+            self.tab_id = _osa(_FIND_TAB, tag)
+
+        try:
+            self._wait_loaded(deadline)
+        except BaseException:
+            self.__exit__(None, None, None)
+            raise
+        return self
+
+    def _wait_loaded(self, deadline: float):
+        path = title = ""
         while time.monotonic() < deadline:
             time.sleep(1)
             try:
-                path, state = _osa(_EXEC_JS, tab_id, _STATUS_JS).split("\n")
+                path, state, title = self.js(_STATUS_JS).split("\n", 2)
             except (BrowserFetchError, ValueError):
                 continue  # 페이지 전환 중
-            if state == "complete" and "/challenge" not in path:
-                html = _osa(_EXEC_JS, tab_id, "document.documentElement.outerHTML")
-                _osa(_CLOSE_TAB, tab_id)
-                return html
-    except BaseException:
-        _osa(_CLOSE_TAB, tab_id)
-        raise
+            if state == "complete" and not _is_challenge(path, title):
+                return
+        if _is_challenge(path, title):
+            self._keep_open = True
+            raise ChallengeRequired(f"challenge page left open in Chrome: {self.url}")
+        raise BrowserFetchError(f"timed out at {path or 'unknown page'}: {self.url}")
 
-    if "/challenge" in path:
-        raise ChallengeRequired(f"challenge page left open in Chrome: {url}")
-    _osa(_CLOSE_TAB, tab_id)
-    raise BrowserFetchError(f"timed out at {path or 'unknown page'}: {url}")
+    def js(self, code: str) -> str:
+        return _osa(_EXEC_JS, self.tab_id, code)
+
+    def wait_until(self, condition_js: str, timeout: float = 15) -> bool:
+        """Poll a JS expression until it returns true."""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if self.js(f"String(Boolean({condition_js}))") == "true":
+                return True
+            time.sleep(0.5)
+        return False
+
+    def html(self) -> str:
+        return self.js("document.documentElement.outerHTML")
+
+    def __exit__(self, *exc):
+        if self.tab_id and not self._keep_open:
+            _osa(_CLOSE_TAB, self.tab_id)
+
+
+def fetch_html(url: str, timeout: float = 45) -> str:
+    """Open url in Chrome, wait until it finishes loading off the challenge page, and return the HTML."""
+    with ChromeTab(url, timeout) as tab:
+        return tab.html()

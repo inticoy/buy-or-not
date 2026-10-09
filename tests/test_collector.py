@@ -4,6 +4,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 
 from app.collector import _deduplicate_deals, _parse_hydration_deals, parse_rank_html
+from app.hotdealzip import parse_deals, parse_price
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -37,6 +38,24 @@ class RankPageFixtureTests(unittest.TestCase):
         self.assertEqual(10, len(deals))
         self.assertTrue(all(deal["url"].startswith("https://www.algumon.com/n/deal/") for deal in deals))
         self.assertTrue(all(deal["title"] for deal in deals))
+
+
+class HotdealZipTests(unittest.TestCase):
+    def test_parses_popular_and_latest_pages(self):
+        for name in ("hotdeal_popular", "hotdeal_latest"):
+            deals = parse_deals((FIXTURES / f"{name}.html").read_text(encoding="utf-8"))
+
+            self.assertEqual(25, len(deals), name)
+            self.assertTrue(all(deal["url"].startswith("https://hotdeal.zip/") for deal in deals))
+            self.assertTrue(all(deal["title"] and deal["id"] for deal in deals))
+
+    def test_parses_won_prices_only(self):
+        self.assertEqual(12000, parse_price("12,000원"))
+        self.assertEqual(2744400, parse_price("2,744,400원"))
+        self.assertIsNone(parse_price("우리$64.57"))
+        self.assertIsNone(parse_price("가격별상이"))
+        self.assertIsNone(parse_price("0원"))
+        self.assertIsNone(parse_price(None))
 
 
 class DeduplicationTests(unittest.TestCase):

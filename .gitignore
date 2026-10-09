@@ -5,3 +5,4 @@ memory/
 logs/
 __pycache__/
 *.pyc
+data/

@@ -1,0 +1,1713 @@
+<html lang="ko" class="theme-ready" data-theme="light" style="--keap-highlight-color: #FFE58F; --search-visual-viewport-height: 969px; --search-visual-viewport-offset-top: 0px;"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style id="theme-bootstrap-style">
+        html {
+            background: #fafafa;
+            color-scheme: light;
+        }
+
+        html[data-theme="dark"] {
+            background: #1a1a1a;
+            color-scheme: dark;
+        }
+
+        html.theme-booting,
+        html.theme-booting *,
+        html.theme-booting *::before,
+        html.theme-booting *::after {
+            transition: none !important;
+        }
+    </style>
+    <script>
+        // 첫 페인트부터 사용자 선택을 우선하고, 선택이 없으면 시스템 테마를 계속 따릅니다.
+        (function() {
+            var root = document.documentElement;
+            var storageKey = 'theme';
+            var mediaQuery = window.matchMedia
+                ? window.matchMedia('(prefers-color-scheme: dark)')
+                : null;
+            var readyScheduled = false;
+
+            function nextFrame(callback) {
+                if (typeof window.requestAnimationFrame === 'function') {
+                    window.requestAnimationFrame(callback);
+                    return;
+                }
+
+                window.setTimeout(callback, 0);
+            }
+
+            function finishBootstrap() {
+                if (readyScheduled) {
+                    return;
+                }
+
+                readyScheduled = true;
+                nextFrame(function() {
+                    nextFrame(function() {
+                        root.classList.remove('theme-booting');
+                        root.classList.add('theme-ready');
+                    });
+                });
+            }
+
+            function readSavedTheme() {
+                try {
+                    var savedTheme = window.localStorage.getItem(storageKey);
+                    return savedTheme === 'dark' || savedTheme === 'light'
+                        ? savedTheme
+                        : null;
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            function notifyThemeChange(theme) {
+                if (typeof window.CustomEvent !== 'function') {
+                    return;
+                }
+
+                window.dispatchEvent(new CustomEvent('hdz:themechange', {
+                    detail: { theme: theme }
+                }));
+            }
+
+            function applyTheme(theme) {
+                var resolvedTheme = theme === 'dark' ? 'dark' : 'light';
+                var changed = root.getAttribute('data-theme') !== resolvedTheme;
+                root.setAttribute('data-theme', resolvedTheme);
+
+                if (changed) {
+                    notifyThemeChange(resolvedTheme);
+                }
+
+                return resolvedTheme;
+            }
+
+            function resolveTheme() {
+                var savedTheme = readSavedTheme();
+                if (savedTheme) {
+                    return savedTheme;
+                }
+
+                return mediaQuery && mediaQuery.matches ? 'dark' : 'light';
+            }
+
+            function syncTheme() {
+                return applyTheme(resolveTheme());
+            }
+
+            function syncSystemTheme() {
+                if (!readSavedTheme()) {
+                    syncTheme();
+                }
+            }
+
+            function setPreference(theme) {
+                try {
+                    if (theme === 'dark' || theme === 'light') {
+                        window.localStorage.setItem(storageKey, theme);
+                    } else {
+                        window.localStorage.removeItem(storageKey);
+                    }
+                } catch (error) {
+                    // 저장소가 차단돼도 현재 탭에는 선택한 테마를 적용합니다.
+                }
+
+                return theme === 'dark' || theme === 'light'
+                    ? applyTheme(theme)
+                    : syncTheme();
+            }
+
+            if (mediaQuery) {
+                if (typeof mediaQuery.addEventListener === 'function') {
+                    mediaQuery.addEventListener('change', syncSystemTheme);
+                } else if (typeof mediaQuery.addListener === 'function') {
+                    mediaQuery.addListener(syncSystemTheme);
+                }
+            }
+
+            window.HDZTheme = {
+                sync: syncTheme,
+                setPreference: setPreference,
+                finishBootstrap: finishBootstrap,
+                toggle: function() {
+                    var currentTheme = root.getAttribute('data-theme');
+                    return setPreference(currentTheme === 'dark' ? 'light' : 'dark');
+                }
+            };
+
+            syncTheme();
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', finishBootstrap, { once: true });
+            } else {
+                finishBootstrap();
+            }
+        })();
+    </script>
+    <title>핫딜모음</title>
+    
+    <meta name="description" content="모든 핫딜 정보를 한눈에! 주요 핫딜모아서 핫딜을 실시간으로 제공합니다.">
+    <meta name="keywords" content="핫딜, 할인, 특가, 에펨코리아, 퀘이사존, 뽐뿌, 루리웹, 아카라이브 ,커뮤니티핫딜, 핫딜모음, 할인정보, 특가정보, 온라인쇼핑">
+    <meta name="author" content="핫딜모음">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://hotdeal.zip">
+    
+    <meta name="language" content="ko">
+    <meta name="geo.region" content="KR">
+    <meta name="geo.country" content="KR">
+    
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="핫딜모음">
+    <meta property="og:description" content="모든 핫딜 정보를 한눈에! 주요 핫딜모아서 핫딜을 실시간으로 제공합니다.">
+    <meta property="og:image" content="https://hotdeal.zip/site_img/og-default.png">
+    <meta property="og:url" content="https://hotdeal.zip">
+    <meta property="og:site_name" content="핫딜모음">
+    <meta property="og:locale" content="ko_KR">
+        
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="핫딜모음">
+    <meta name="twitter:description" content="모든 핫딜 정보를 한눈에! 주요 핫딜모아서 핫딜을 실시간으로 제공합니다.">
+    <meta name="twitter:image" content="https://hotdeal.zip/site_img/og-default.png">
+    <meta name="twitter:site" content="@hotdealzip">
+    <meta name="twitter:creator" content="@hotdealzip">
+
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <meta name="theme-color" content="#007aff">
+    <meta name="msapplication-TileColor" content="#007aff">
+
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+	
+	<script defer="" data-domain="hotdeal.zip" src="https://damo0.com/js/script.tagged-events.js"></script>
+    
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "핫딜모음",
+        "url": "https://hotdeal.zip",
+        "logo": "https://hotdeal.zip/site_img/logo_on_transparent_background.png",
+        "description": "모든 핫딜 정보를 한곳에서! 온라인의 주요 핫딜을 실시간으로 모아서 제공하는 종합 할인 정보 사이트",
+        "foundingDate": "2024",
+        "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer service",
+            "email": "contact@hotdeal.zip"
+        }
+    }
+    </script>
+    
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "핫딜모음",
+        "url": "https://hotdeal.zip",
+        "description": "모든 핫딜 정보를 한눈에 볼 수 있도록 실시간으로 모아서 제공합니다",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://hotdeal.zip/search/{search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+    }
+    </script>
+    
+        
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/all.min.css" rel="stylesheet" integrity="sha384-qrALq7+6jBOZIQsNnT6xGkMDru64qD6uTlDra39xrt2SoXl4pO3FX6Roz/RpR/BS" crossorigin="anonymous">
+	<!-- css/common_styles.css 수정 시 아래 ?버전숫자를 증가시켜 캐시를 갱신하세요 -->
+    <link rel="stylesheet" href="/css/common_styles.css?20260901-deal-price-presentation-1">
+    
+    <script>
+        // 새로고침 감지 (common_scripts.js보다 먼저 실행되도록)
+        const perfEntries = performance.getEntriesByType('navigation');
+        const isReload = perfEntries.length > 0 && perfEntries[0].type === 'reload';
+        const hash = window.location.hash.substring(1);
+
+        // 새로고침이면서 해시가 있는 경우 플래그 설정
+        if (isReload && hash) {
+            window.isPageReloaded = true;
+            console.log('🔄 새로고침 감지: 해시 복원 기능 비활성화');
+            // 해시를 완전히 제거
+            window.location.hash = '';
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    </script>
+        <script>
+        window.HOTDEAL_COMMUNITY_CONFIG = {"nameByKeyword":{"fmkorea":"FM코리아","quasarzone":"퀘이사존","arca.live":"아카라이브","ppomppu":"뽐뿌","dogdrip":"개드립","ruliweb":"루리웹","etc_site":"기타","eomisae":"어미새"},"faviconByKeyword":{"fmkorea":"https://hotdeal.zip/site_favicon/fmkorea.ico","quasarzone":"https://hotdeal.zip/site_favicon/quasarzone.ico","arca.live":"https://hotdeal.zip/site_favicon/arcalive.ico","ppomppu":"https://hotdeal.zip/site_favicon/ppomppu.ico","dogdrip":"https://hotdeal.zip/site_favicon/dogdrip.ico","ruliweb":"https://hotdeal.zip/site_favicon/ruliweb.ico","etc_site":"https://hotdeal.zip/site_favicon/etc_site.png","eomisae":"https://hotdeal.zip/site_favicon/eomisae.ico"},"nameToId":{"FM코리아":"fmkorea","퀘이사존":"quasarzone","아카라이브":"arca.live","뽐뿌":"ppomppu","개드립":"dogdrip","루리웹":"ruliweb","기타":"etc_site","어미새":"eomisae"},"defaultFavicon":"🌐"};
+    </script>
+	<!-- /js/common_scripts.js 수정 시 아래 ?버전숫자를 증가시켜 캐시를 갱신하세요 -->
+    <script src="/js/common_scripts.js?20260901-deal-price-presentation-1"></script>
+    <link rel="stylesheet" href="/css/announcement_ui.css?2026-07-29-comment-scope-fix">
+    <script defer="" src="/js/announcement_ui.js?20260822-fontawesome-7-1"></script>
+    <link rel="stylesheet" href="/css/header.css?20260804-performance-1">
+        <link rel="stylesheet" href="/css/search_dropdown.css?20260822-tag-search-minimal-1">
+    <script src="/js/search_dropdown.js?20260822-fontawesome-7-tag-search-toolbar-1" defer=""></script>
+    <script defer="" src="/js/auth_state.js?20260816-auth-diagnostics-1"></script>
+    <script defer="" src="/js/header.js?20260822-fontawesome-7-1"></script>
+    <script src="/cdn-cgi/challenge-platform/scripts/precursor/main.js"></script></head>
+<body>
+    <header class="header">
+        <div class="container">
+                        <div class="header-content" id="headerContent">
+                <a href="/" class="logo">
+                    <img src="/site_img/logo_on_transparent_background.png" alt="">
+                    <span>핫딜모음</span>
+                </a>
+                <div class="search" id="headerSearch" data-search-enhanced="true">
+                    <button type="button" class="search-toggle-button" id="headerSearchToggle" onclick="toggleHeaderSearch()" title="검색" aria-label="검색 열기">
+                        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    </button>
+                    <form action="/search.php" method="GET" id="headerSearchForm" role="search">
+                        <input type="text" name="q" id="searchInput" placeholder="검색" value="" autocomplete="off" maxlength="50" role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-controls="searchSuggestionsList" aria-expanded="false">
+                        <button type="submit" class="search-submit-button" aria-label="검색">
+                            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                        </button>
+                    </form>
+                    <button type="button" class="search-close-button" onclick="closeHeaderSearch()" title="검색 닫기" aria-label="검색 닫기">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                    <div class="search-suggestions" id="searchSuggestions" hidden="">
+                        <div class="search-dropdown-toolbar">
+                            <span class="search-dropdown-toolbar-copy">
+                                <span class="search-dropdown-toolbar-title">검색</span>
+                                <span class="search-dropdown-tag-hint">· #태그명 가능</span>
+                            </span>
+                            <button type="button" class="search-dropdown-close" id="searchDropdownClose" aria-label="검색 드롭다운 닫기" title="닫기">
+                                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="search-dropdown-content" id="searchSuggestionsList" role="listbox" aria-label="검색 추천"><div class="search-dropdown-default"><section class="search-dropdown-section" role="group" aria-label="최근 검색어"><div class="search-dropdown-section-header"><h3 class="search-dropdown-section-title">최근 검색어</h3></div><div class="search-dropdown-list"><div class="search-dropdown-empty">최근 검색어가 없습니다.</div></div></section><div class="search-dropdown-insights"><div class="search-dropdown-insight-tabs" role="tablist" aria-label="검색어 순위"><button class="search-dropdown-insight-tab is-active" type="button" role="tab" aria-controls="search-dropdown-insight-popular" data-insight-tab-button="popular" aria-selected="true" tabindex="0">인기 검색어</button><button class="search-dropdown-insight-tab" type="button" role="tab" aria-controls="search-dropdown-insight-trending" data-insight-tab-button="trending" aria-selected="false" tabindex="-1">급상승 검색어</button></div><section class="search-dropdown-section search-dropdown-insight-section is-popular is-active" role="group" aria-label="24시간 인기 검색어" data-insight-tab="popular" id="search-dropdown-insight-popular"><div class="search-dropdown-section-header"><h3 class="search-dropdown-section-title">24시간 인기 검색어</h3></div><div class="search-dropdown-list"><div class="search-dropdown-empty">인기 검색어가 없습니다.</div></div></section><section class="search-dropdown-section search-dropdown-insight-section is-trending" role="group" aria-label="급상승 검색어" data-insight-tab="trending" id="search-dropdown-insight-trending"><div class="search-dropdown-section-header"><h3 class="search-dropdown-section-title">급상승 검색어</h3></div><div class="search-dropdown-list"><div class="search-dropdown-empty">집계 중입니다.</div></div></section></div></div></div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <div class="desktop-auth-slot">
+                        <a href="/auth/profile.php?return_to=%2F%23sallae-f0553588" class="auth-link header-login-link guest-only" data-auth-login="" aria-label="로그인 창 열기" title="로그인">
+                            <i class="fa-solid fa-circle-user" aria-hidden="true"></i>
+                        </a>
+                        <div class="account-dropdown auth-only" id="headerAccountDropdown" hidden="">
+                            <button type="button" class="header-account-button" id="headerAccountButton" onclick="toggleAccountMenu()" aria-label="내 계정 메뉴 열기" aria-expanded="false" aria-controls="accountMenu">
+                                <i class="fa-solid fa-circle-user auth-fallback-icon" aria-hidden="true"></i>
+                                <img class="auth-avatar auth-avatar-image" alt="" hidden="">
+                                <i class="fa-solid fa-chevron-down account-chevron" aria-hidden="true"></i>
+                            </button>
+                            <div class="account-menu" id="accountMenu">
+                                <a href="/auth/profile.php" class="account-summary" data-auth-profile="">
+                                    <i class="fa-solid fa-circle-user auth-fallback-icon" aria-hidden="true"></i>
+                                    <img class="auth-avatar auth-avatar-image" alt="" hidden="">
+                                    <span class="account-summary-copy">
+                                        <strong class="auth-display-name">내 계정</strong>
+                                        <span class="account-meta-line">
+                                            <span class="account-provider-label">회원 계정</span>
+                                            <span aria-hidden="true">·</span>
+                                            <span class="account-point-balance">0P</span>
+                                        </span>
+                                    </span>
+                                </a>
+                                <a href="/attendance.php" class="menu-item auth-only" hidden="">
+                                    <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+                                    <span>출석체크</span>
+                                </a>
+                                <a href="/point_shop.php" class="menu-item auth-only" data-point-shop-link="" hidden="">
+                                    <i class="fa-solid fa-gift" aria-hidden="true"></i>
+                                    <span>포인트샵</span>
+                                    <span class="announcement-new-badge" hidden="">NEW</span>
+                                </a>
+                                <a href="/auth/logout.php?return_to=%2F%23sallae-f0553588" class="menu-item account-logout" data-auth-logout="">
+                                    <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                                    <span>로그아웃</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="menu-dropdown">
+                        <button type="button" class="menu-toggle" onclick="toggleMenu()" title="메뉴" aria-label="메뉴 열기" aria-expanded="false" aria-controls="menuContent">
+                            <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                        </button>
+                        <div class="menu-content" id="menuContent">
+                            <div class="mobile-auth-section">
+                                <a href="/auth/profile.php?return_to=%2F%23sallae-f0553588" class="mobile-account-card guest-only" data-auth-login="">
+                                    <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+                                    <span class="mobile-account-copy">
+                                        <strong>로그인</strong>
+                                        <span class="mobile-account-caption">포인트 적립과 회원 혜택</span>
+                                    </span>
+                                </a>
+                                <a href="/auth/profile.php" class="mobile-account-card auth-only" data-auth-profile="" hidden="">
+                                    <i class="fa-solid fa-circle-user auth-fallback-icon" aria-hidden="true"></i>
+                                    <img class="auth-avatar auth-avatar-image" alt="" hidden="">
+                                    <span class="mobile-account-copy">
+                                        <strong class="auth-display-name">내 계정</strong>
+                                        <span class="account-meta-line">
+                                            <span class="account-provider-label">회원 계정</span>
+                                            <span aria-hidden="true">·</span>
+                                            <span class="account-point-balance">0P</span>
+                                        </span>
+                                    </span>
+                                </a>
+                                <div class="menu-divider"></div>
+                            </div>
+                            <a href="/bookmarks.php" class="menu-item">
+                                <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+                                <span>북마크</span>
+                            </a>
+                            <a href="/notification.php" class="menu-item">
+                                <i class="fa-solid fa-bell" aria-hidden="true"></i>
+                                <span>핫딜알림</span>
+                            </a>
+                            <a href="/contact.php" class="menu-item">
+                                <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                                <span>문의하기</span>
+                            </a>
+                            <button type="button" id="theme-toggle" class="menu-item menu-theme-toggle" onclick="toggleTheme()">
+                                <i class="fa-solid fa-moon" aria-hidden="true"></i>
+                                <span id="themeToggleLabel">다크 모드</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                    </div>
+    </header>
+
+        <div class="login-dialog-backdrop" id="loginDialogBackdrop" hidden="">
+        <section class="login-dialog" id="loginDialog" role="dialog" aria-modal="true" aria-labelledby="loginDialogTitle" aria-describedby="loginDialogDescription" tabindex="-1">
+            <button type="button" class="login-dialog-close" id="loginDialogClose" aria-label="로그인 창 닫기">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+            <div class="login-dialog-brand" aria-hidden="true">
+                <img src="/site_img/logo_on_transparent_background.png" alt="">
+            </div>
+            <h2 class="login-dialog-title" id="loginDialogTitle">로그인</h2>
+            <p class="login-dialog-description" id="loginDialogDescription">
+                로그인하고 포인트를 적립해 다양한 혜택을 즐겨보세요.
+            </p>
+            <p class="login-dialog-error" id="loginDialogError" role="alert" hidden="">
+                로그인을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.
+            </p>
+            <div class="login-dialog-providers">
+                <a href="/auth/kakao/login.php?return_to=%2F%23sallae-f0553588" class="login-provider-button kakao" data-auth-provider="kakao">
+                    <i class="fa-solid fa-comment" aria-hidden="true"></i>
+                    카카오로 계속하기
+                </a>
+                <a href="/auth/google/login.php?return_to=%2F%23sallae-f0553588" class="login-provider-button google" data-auth-provider="google">
+                    <i class="fa-brands fa-google" aria-hidden="true"></i>
+                    Google로 계속하기
+                </a>
+            </div>
+        </section>
+    </div>
+    
+        <div class="nickname-dialog-backdrop" id="nicknameDialogBackdrop" hidden="">
+        <section class="nickname-dialog" id="nicknameDialog" role="dialog" aria-modal="true" aria-labelledby="nicknameDialogTitle" aria-describedby="nicknameDialogDescription" tabindex="-1">
+            <div class="nickname-dialog-icon" aria-hidden="true">
+                <i class="fa-solid fa-user-pen" aria-hidden="true"></i>
+            </div>
+            <h2 id="nicknameDialogTitle">사용할 닉네임을 정해주세요</h2>
+            <p class="nickname-dialog-description" id="nicknameDialogDescription">
+                회원 댓글과 계정 화면에 표시됩니다. 설정 후에는 30일마다 변경할 수 있어요.
+            </p>
+            <form id="nicknameForm" novalidate="">
+                <label class="nickname-field-label" for="nicknameInput">닉네임</label>
+                <input class="nickname-input" id="nicknameInput" name="nickname" type="text" minlength="2" maxlength="20" pattern="[가-힣A-Za-z0-9_]+" autocomplete="nickname" placeholder="2~20자 닉네임" required="">
+                <p class="nickname-field-help">한글, 영문, 숫자, 밑줄만 사용할 수 있습니다.</p>
+                <p class="nickname-dialog-error" id="nicknameDialogError" role="alert" hidden=""></p>
+                <button class="nickname-submit" id="nicknameSubmit" type="submit">닉네임 설정하고 시작하기</button>
+            </form>
+        </section>
+    </div>
+    
+        <nav class="nav">
+        <div class="container">
+            <ul class="nav-list">
+                <li class="nav-item"><a href="/" class="active">전체</a></li><li class="nav-item"><a href="/인기" class="">인기</a></li><li class="nav-item"><a href="/쿠팡최저가" class="">쿠팡최저가</a></li><li class="nav-item"><a href="/식품" class="">식품</a></li><li class="nav-item"><a href="/생활용품" class="">생활용품</a></li><li class="nav-item"><a href="/게임" class="">게임</a></li><li class="nav-item"><a href="/PC" class="">PC</a></li><li class="nav-item"><a href="/가전" class="">가전</a></li><li class="nav-item"><a href="/의류" class="">의류</a></li>                                <li class="nav-item nav-more-dropdown">
+                    <button type="button" class="nav-more-toggle " id="navMoreToggle" onclick="toggleNavMoreMenu()" aria-expanded="false" aria-controls="navMoreContent">
+                        <span>더보기</span>
+                        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <div class="nav-more-content" id="navMoreContent">
+                                                <a href="/화장품" class="nav-more-item ">
+                            화장품                        </a>
+                                                <a href="/생활관" class="nav-more-item ">
+                            생활관                        </a>
+                                                <a href="/기타" class="nav-more-item ">
+                            기타                        </a>
+                                                <a href="/해외핫딜" class="nav-more-item ">
+                            해외핫딜                        </a>
+                                            </div>
+                </li>
+                            </ul>
+        </div>
+    </nav>
+    
+<main class="main">
+    <div class="container">
+        <div class="page-header-wrapper">
+            <div class="page-header-copy">
+                <h1 class="section-title">실시간 핫딜모음</h1>
+                <p class="section-subtitle">모든 실시간 핫딜을 한눈에 정리해드려요</p>
+            </div>
+            
+            <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleCommunityFilter()" title="커뮤니티 필터" aria-label="커뮤니티 필터">
+                <i class="fa-solid fa-filter" aria-hidden="true"></i>
+            </button>
+        </div>
+        
+        <div class="community-filter-dropdown" id="communityFilterDropdown">
+    <div class="filter-header">
+        <h3>커뮤니티 선택</h3>
+        <button type="button" class="filter-close-btn" onclick="toggleCommunityFilter()" aria-label="커뮤니티 필터 닫기">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+    </div>
+    <div class="filter-content">
+                <div class="filter-item" data-community="fmkorea">
+            <label class="filter-label">
+                <input type="checkbox" class="filter-checkbox" value="fmkorea" checked="">
+                <span class="filter-checkbox-custom"></span>
+                                <img src="https://hotdeal.zip/site_favicon/fmkorea.ico" alt="FM코리아" class="filter-favicon">
+                                <span class="filter-name">
+                    FM코리아                </span>
+            </label>
+        </div>
+                <div class="filter-item" data-community="quasarzone">
+            <label class="filter-label">
+                <input type="checkbox" class="filter-checkbox" value="quasarzone" checked="">
+                <span class="filter-checkbox-custom"></span>
+                                <img src="https://hotdeal.zip/site_favicon/quasarzone.ico" alt="퀘이사존" class="filter-favicon">
+                                <span class="filter-name">
+                    퀘이사존                </span>
+            </label>
+        </div>
+                <div class="filter-item" data-community="arca.live">
+            <label class="filter-label">
+                <input type="checkbox" class="filter-checkbox" value="arca.live" checked="">
+                <span class="filter-checkbox-custom"></span>
+                                <img src="https://hotdeal.zip/site_favicon/arcalive.ico" alt="아카라이브" class="filter-favicon">
+                                <span class="filter-name">
+                    아카라이브                </span>
+            </label>
+        </div>
+                <div class="filter-item" data-community="ppomppu">
+            <label class="filter-label">
+                <input type="checkbox" class="filter-checkbox" value="ppomppu" checked="">
+                <span class="filter-checkbox-custom"></span>
+                                <img src="https://hotdeal.zip/site_favicon/ppomppu.ico" alt="뽐뿌" class="filter-favicon">
+                                <span class="filter-name">
+                    뽐뿌                </span>
+            </label>
+        </div>
+                <div class="filter-item" data-community="dogdrip">
+            <label class="filter-label">
+                <input type="checkbox" class="filter-checkbox" value="dogdrip" checked="">
+                <span class="filter-checkbox-custom"></span>
+                                <img src="https://hotdeal.zip/site_favicon/dogdrip.ico" alt="개드립" class="filter-favicon">
+                                <span class="filter-name">
+                    개드립                </span>
+            </label>
+        </div>
+                <div class="filter-item" data-community="ruliweb">
+            <label class="filter-label">
+                <input type="checkbox" class="filter-checkbox" value="ruliweb" checked="">
+                <span class="filter-checkbox-custom"></span>
+                                <img src="https://hotdeal.zip/site_favicon/ruliweb.ico" alt="루리웹" class="filter-favicon">
+                                <span class="filter-name">
+                    루리웹                </span>
+            </label>
+        </div>
+                <div class="filter-item" data-community="etc_site">
+            <label class="filter-label">
+                <input type="checkbox" class="filter-checkbox" value="etc_site" checked="">
+                <span class="filter-checkbox-custom"></span>
+                                <img src="https://hotdeal.zip/site_favicon/etc_site.png" alt="기타" class="filter-favicon">
+                                <span class="filter-name">
+                    기타                </span>
+            </label>
+        </div>
+            </div>
+    <div class="filter-footer">
+        <button type="button" class="filter-reset-btn" onclick="resetCommunityFilter()">
+            <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+            전체 선택
+        </button>
+    </div>
+</div>
+        
+        <div id="initial-loading" class="hotdeal-initial-loading" style="display: none;">
+            <div class="hotdeal-loading-spinner"></div>
+            <p>최신 핫딜을 불러오는 중...</p>
+        </div>
+        
+        <div class="deals-list" id="deals-list" style="display: block;">
+        <a class="deal-item" data-seo-url="메가커피-20-할인-3ded" data-id="225605" href="/메가커피-20-할인-3ded">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/11-20-3baa-01b4cd0bb7b38f1f013b434e5fb2c6568a7d61ffc809ebb45e95a34e6e680c38.webp" alt="메가커피 20%할인" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">11번가</span>
+                    
+                <span class="community-favicon" title="루리웹">
+                    <img src="https://hotdeal.zip/site_favicon/ruliweb.ico" alt="루리웹" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;루리웹';">
+                    루리웹
+                </span>
+            
+                </div>
+                <h3 class="deal-title">메가커피 20%할인</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="relative-time time-fresh">1분전</span>
+                        
+                        
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">19:10</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="아이더-윈드락-윈드스토퍼-방풍-자켓-9091" data-id="225604" href="/아이더-윈드락-윈드스토퍼-방풍-자켓-9091">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/67690-a146-5f9bb8e3f7e1bd8387647639b01671e16fff5303e862c07241ca39ea36a93c56.webp" alt="아이더 윈드락 윈드스토퍼 방풍 자켓" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">의류</span>
+                    <span class="deal-site">롯데온</span>
+                    
+                <span class="community-favicon" title="뽐뿌">
+                    <img src="https://hotdeal.zip/site_favicon/ppomppu.ico" alt="뽐뿌" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;뽐뿌';">
+                    뽐뿌
+                </span>
+            
+                </div>
+                <h3 class="deal-title">아이더 윈드락 윈드스토퍼 방풍 자켓</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">67,690원</span>
+                        
+                        <span class="relative-time time-fresh">5분전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">19:06</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="햇반컵반-강된장-보리-비빔밥-280g-4개-296a" data-id="225603" href="/햇반컵반-강된장-보리-비빔밥-280g-4개-296a">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/280g-4-4082-6886cecd595c55d01ea8aa5883c7a7255cdc877996ee3bc3fd536fd24099c079.webp" alt="햇반컵반 강된장 보리 비빔밥, 280g, 4개" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">쿠팡</span>
+                    
+                <span class="community-favicon" title="아카라이브">
+                    <img src="https://hotdeal.zip/site_favicon/arcalive.ico" alt="아카라이브" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;아카라이브';">
+                    아카라이브
+                </span>
+            
+                </div>
+                <h3 class="deal-title">햇반컵반 강된장 보리 비빔밥, 280g, 4개</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">8,790원</span>
+                        
+                        <span class="relative-time time-fresh">7분전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">19:04</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="하츠-간편세척-초음파-가습기-2l-4dbb" data-id="225602" href="/하츠-간편세척-초음파-가습기-2l-4dbb">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/2l-25900-0539-d8843ede6443ca88a4d708babf39724cb25ca82dc26981d1e49536627e1230a4.webp" alt="하츠 간편세척 초음파 가습기 2L" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">가전</span>
+                    <span class="deal-site">카카오</span>
+                    
+                <span class="community-favicon" title="뽐뿌">
+                    <img src="https://hotdeal.zip/site_favicon/ppomppu.ico" alt="뽐뿌" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;뽐뿌';">
+                    뽐뿌
+                </span>
+            
+                </div>
+                <h3 class="deal-title">하츠 간편세척 초음파 가습기 2L</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">25,900원</span>
+                        
+                        <span class="relative-time time-fresh">9분전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">19:02</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="레니프-유니백체어-프로-5e25" data-id="225601" href="/레니프-유니백체어-프로-5e25">
+        <div class="deal-content">
+            <div class="deal-image-placeholder" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">📦</div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">생활용품</span>
+                    <span class="deal-site">레니프</span>
+                    
+                <span class="community-favicon" title="뽐뿌">
+                    <img src="https://hotdeal.zip/site_favicon/ppomppu.ico" alt="뽐뿌" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;뽐뿌';">
+                    뽐뿌
+                </span>
+            
+                </div>
+                <h3 class="deal-title">레니프 유니백체어 프로</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">349,000원</span>
+                        
+                        <span class="relative-time time-fresh">9분전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">19:02</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="이모뜰-국내산-홍로사과-대과-5kg-1개-2a22" data-id="225600" href="/이모뜰-국내산-홍로사과-대과-5kg-1개-2a22">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/5kg-1-2a22-e57da06e96647e3148dcdd07e20f52df991239101eabca81fcc7cbcd2d7665f0.webp" alt="이모뜰 국내산 홍로사과, 대과, 5kg, 1개" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">토스쇼핑</span>
+                    
+                </div>
+                <h3 class="deal-title">이모뜰 국내산 홍로사과, 대과, 5kg, 1개</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">16,900원</span>
+                        
+                        <span class="relative-time time-fresh">11분전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">19:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="전통압착-통참기름-350ml-2개-9de9" data-id="225599" href="/전통압착-통참기름-350ml-2개-9de9">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/350ml-2-9de9-20ca3225fc29fd9d9090dc9176df992c8fc269849d75e3ad90214d10adf013d0.webp" alt="전통압착 통참기름, 350ml, 2개" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">토스쇼핑</span>
+                    
+                </div>
+                <h3 class="deal-title">전통압착 통참기름, 350ml, 2개</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">9,900원</span>
+                        
+                        <span class="relative-time time-fresh">11분전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">19:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="수입-홍어회무침-1kg-cd0e" data-id="225598" href="/수입-홍어회무침-1kg-cd0e">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/1kg-12990-71c0-c0fb93caa25cb708b9000afb36ad3c054ab0f47b75cc18969f3330faee670e98.webp" alt="수입 홍어회무침 1kg" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">롯데온</span>
+                    
+                <span class="community-favicon" title="뽐뿌">
+                    <img src="https://hotdeal.zip/site_favicon/ppomppu.ico" alt="뽐뿌" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;뽐뿌';">
+                    뽐뿌
+                </span>
+            
+                </div>
+                <h3 class="deal-title">수입 홍어회무침 1kg</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">12,990원</span>
+                        
+                        <span class="relative-time time-fresh">15분전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:56</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="닛신-미니-컵라면-서일본버전-5개세트-직구-b20a" data-id="225597" href="/닛신-미니-컵라면-서일본버전-5개세트-직구-b20a">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/5-fe06-2236af6c3bd8c45ef3250f7f03deab6765a4616b829b28d5bf084afbfa408051.webp" alt="닛신 미니 컵라면 서일본버전 5개세트 직구" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">쿠팡</span>
+                    
+                <span class="community-favicon" title="아카라이브">
+                    <img src="https://hotdeal.zip/site_favicon/arcalive.ico" alt="아카라이브" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;아카라이브';">
+                    아카라이브
+                </span>
+            
+                </div>
+                <h3 class="deal-title">닛신 미니 컵라면 서일본버전 5개세트 직구</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">5,250원</span>
+                        
+                        <span class="relative-time time-fresh">19분전</span>
+                        <span class="deal-comment-count" aria-label="댓글 수">
+               <i class="fa-regular fa-comment-dots" aria-hidden="true"></i>
+               <span>6</span>
+           </span>
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:52</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="여수-라테라스amp깔라까다-1011월-투숙객-워터파크-무료-카드-6c7f" data-id="225596" href="/여수-라테라스amp깔라까다-1011월-투숙객-워터파크-무료-카드-6c7f">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/1b9d-c24ac10cc256e20cc379b740398c1bb171bd554e1238cf97fff74f0199f55102.webp" alt="여수 라테라스&amp;깔라까다 (10~11월 투숙객 워터파크 무료) (카드)" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">생활관</span>
+                    <span class="deal-site">롯데온</span>
+                    
+                <span class="community-favicon" title="FM코리아">
+                    <img src="https://hotdeal.zip/site_favicon/fmkorea.ico" alt="FM코리아" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;FM코리아';">
+                    FM코리아
+                </span>
+            
+                </div>
+                <h3 class="deal-title">여수 라테라스&amp;깔라까다 (10~11월 투숙객 워터파크 무료) (카드)</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">78,800원</span>
+                        
+                        <span class="relative-time time-fresh">19분전</span>
+                        <span class="deal-comment-count" aria-label="댓글 수">
+               <i class="fa-regular fa-comment-dots" aria-hidden="true"></i>
+               <span>4</span>
+           </span>
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:52</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="오뚜기-로제열라면-2팩열라면-2팩-총18개입-6a5e" data-id="225595" href="/오뚜기-로제열라면-2팩열라면-2팩-총18개입-6a5e">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/2-2-18-9980-1bb5-0958f8ce528104ecfc99932677840ff2106a37f29ed6b43495530c98856b2587.webp" alt="오뚜기 로제열라면 2팩+열라면 2팩 (총18개입)" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">옥션</span>
+                    
+                <span class="community-favicon" title="뽐뿌">
+                    <img src="https://hotdeal.zip/site_favicon/ppomppu.ico" alt="뽐뿌" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;뽐뿌';">
+                    뽐뿌
+                </span>
+            
+                </div>
+                <h3 class="deal-title">오뚜기 로제열라면 2팩+열라면 2팩 (총18개입)</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">9,980원</span>
+                        
+                        <span class="relative-time time-fresh">21분전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:50</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="스토리-리치-메가번들-꾸러미-게임-10개-c934" data-id="225594" href="/스토리-리치-메가번들-꾸러미-게임-10개-c934">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/10-26-420-f125-02937b166190d08a424ff9ff2e69206d76897dc01517de5820743c6c8cdce2ce.webp" alt="스토리-리치 메가번들(꾸러미) / 게임 10개" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">게임</span>
+                    <span class="deal-site">스팀</span>
+                    
+                <span class="community-favicon" title="루리웹">
+                    <img src="https://hotdeal.zip/site_favicon/ruliweb.ico" alt="루리웹" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;루리웹';">
+                    루리웹
+                </span>
+            
+                </div>
+                <h3 class="deal-title">스토리-리치 메가번들(꾸러미) / 게임 10개</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">26,420원</span>
+                        
+                        <span class="relative-time time-fresh">21분전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:50</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="촉촉한-초코칩-16개입-x-3박스-9e8b" data-id="225593" href="/촉촉한-초코칩-16개입-x-3박스-9e8b">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/16-x-3-f01a-09a036482756cd773d30110fd7db5bc280c51b430acd5464ba5fed4c2352f52f.webp" alt="촉촉한 초코칩 16개입 x 3박스" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">지마켓</span>
+                    
+                <span class="community-favicon" title="아카라이브">
+                    <img src="https://hotdeal.zip/site_favicon/arcalive.ico" alt="아카라이브" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;아카라이브';">
+                    아카라이브
+                </span>
+            
+                </div>
+                <h3 class="deal-title">촉촉한 초코칩 16개입 x 3박스</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">9,900원</span>
+                        
+                        <span class="relative-time time-fresh">21분전</span>
+                        <span class="deal-comment-count" aria-label="댓글 수">
+               <i class="fa-regular fa-comment-dots" aria-hidden="true"></i>
+               <span>1</span>
+           </span>
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:50</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="햇반-구수한발아현미밥210g24개-4b6f" data-id="225592" href="/햇반-구수한발아현미밥210g24개-4b6f">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/192b-5ac35a3051a6c8e8c3d0093924a15d9fc8563363bc6d8964f59e2ac3b1bf83de.webp" alt="햇반 구수한발아현미밥210g,24개" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">토스쇼핑</span>
+                    
+                <span class="community-favicon" title="FM코리아">
+                    <img src="https://hotdeal.zip/site_favicon/fmkorea.ico" alt="FM코리아" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;FM코리아';">
+                    FM코리아
+                </span>
+            
+                </div>
+                <h3 class="deal-title">햇반 구수한발아현미밥210g,24개</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">27,290원</span>
+                        
+                        <span class="relative-time time-fresh">29분전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:42</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="2006-더블-코튼-플리스-스웨트셔츠-라이트-그레이-65fe" data-id="225591" href="/2006-더블-코튼-플리스-스웨트셔츠-라이트-그레이-65fe">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/d1e9-1012c4c32923f99da791bf952ffc69823c48bd9d24c4f1000a11a1727e15988f.webp" alt="2006 더블 코튼 플리스 스웨트셔츠 라이트 그레이" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">의류</span>
+                    <span class="deal-site">무신사</span>
+                    
+                <span class="community-favicon" title="FM코리아">
+                    <img src="https://hotdeal.zip/site_favicon/fmkorea.ico" alt="FM코리아" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;FM코리아';">
+                    FM코리아
+                </span>
+            
+                </div>
+                <h3 class="deal-title">2006 더블 코튼 플리스 스웨트셔츠 라이트 그레이</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">9,980원</span>
+                        
+                        <span class="relative-time time-recent">33분전</span>
+                        <span class="deal-comment-count" aria-label="댓글 수">
+               <i class="fa-regular fa-comment-dots" aria-hidden="true"></i>
+               <span>3</span>
+           </span>
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:38</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="필립스-다리미-sth502020외-7종-ace8" data-id="225590" href="/필립스-다리미-sth502020외-7종-ace8">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/sth502020-7-29900-e577-068a729b020de2ea1ca2ca35b43ead9d02a2377704ce3bb0cff0d87b34b78d8e.webp" alt="필립스 다리미 STH5020/20외 7종" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">가전</span>
+                    <span class="deal-site">카카오톡</span>
+                    
+                <span class="community-favicon" title="뽐뿌">
+                    <img src="https://hotdeal.zip/site_favicon/ppomppu.ico" alt="뽐뿌" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;뽐뿌';">
+                    뽐뿌
+                </span>
+            
+                </div>
+                <h3 class="deal-title">필립스 다리미 STH5020/20외 7종</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="deal-price-description">29,900원~</span>
+                        
+                        <span class="relative-time time-recent">39분전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:32</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="몬스터-울트라망고로코-355ml-48캔-f4a0" data-id="225589" href="/몬스터-울트라망고로코-355ml-48캔-f4a0">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/355ml-48-6a58-4e47a99a7d8fdadcfe4ffd7714c57f3f3858893e7d5dce67b1ddf9383954eeb5.webp" alt="몬스터 울트라+망고로코 355ml 48캔" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">지마켓</span>
+                    
+                <span class="community-favicon" title="아카라이브">
+                    <img src="https://hotdeal.zip/site_favicon/arcalive.ico" alt="아카라이브" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;아카라이브';">
+                    아카라이브
+                </span>
+            
+                </div>
+                <h3 class="deal-title">몬스터 울트라+망고로코 355ml 48캔</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">54,780원</span>
+                        
+                        <span class="relative-time time-recent">45분전</span>
+                        <span class="deal-comment-count" aria-label="댓글 수">
+               <i class="fa-regular fa-comment-dots" aria-hidden="true"></i>
+               <span>3</span>
+           </span>
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:26</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="쉐이크픽-5g-30gb-100분-0471" data-id="225588" href="/쉐이크픽-5g-30gb-100분-0471">
+        <div class="deal-content">
+            <div class="deal-image-placeholder" style="background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);">📦</div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">기타</span>
+                    <span class="deal-site">쉐이크모바일</span>
+                    
+                <span class="community-favicon" title="루리웹">
+                    <img src="https://hotdeal.zip/site_favicon/ruliweb.ico" alt="루리웹" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;루리웹';">
+                    루리웹
+                </span>
+            
+                </div>
+                <h3 class="deal-title">쉐이크픽 5G 30GB 100분</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="deal-price-description">월 10원(12개월)</span>
+                        
+                        <span class="relative-time time-recent">46분전</span>
+                        <span class="deal-comment-count" aria-label="댓글 수">
+               <i class="fa-regular fa-comment-dots" aria-hidden="true"></i>
+               <span>5</span>
+           </span>
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:25</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="한성유통-국내정품acer-predator-gm9000-2tb-m2-nvme-ssd-d953" data-id="225587" href="/한성유통-국내정품acer-predator-gm9000-2tb-m2-nvme-ssd-d953">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/acer-predator-gm9000-2tb-m2-nvme-ssd-88e9-44c93f509d427633ac9ba91e217df877dd432b3d71055e542e0c10fcf9df819d.webp" alt="[한성유통 국내정품]ACER PREDATOR GM9000 2TB M.2 NVME SSD" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">PC</span>
+                    <span class="deal-site">지마켓</span>
+                    
+                <span class="community-favicon" title="아카라이브">
+                    <img src="https://hotdeal.zip/site_favicon/arcalive.ico" alt="아카라이브" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;아카라이브';">
+                    아카라이브
+                </span>
+            
+                </div>
+                <h3 class="deal-title">[한성유통 국내정품]ACER PREDATOR GM9000 2TB M.2 NVME SSD</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">543,720원</span>
+                        
+                        <span class="relative-time time-recent">47분전</span>
+                        <span class="deal-comment-count" aria-label="댓글 수">
+               <i class="fa-regular fa-comment-dots" aria-hidden="true"></i>
+               <span>9</span>
+           </span>
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:24</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="오타후쿠-오무라이스소스-300g-1개-e5ff" data-id="225586" href="/오타후쿠-오무라이스소스-300g-1개-e5ff">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/300g-1-5fc8-ec0514d362d1df828fbec131da628685c2a5414f21643f25286c389292e894db.webp" alt="오타후쿠 오무라이스소스, 300g, 1개" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">쿠팡</span>
+                    
+                <span class="community-favicon" title="아카라이브">
+                    <img src="https://hotdeal.zip/site_favicon/arcalive.ico" alt="아카라이브" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;아카라이브';">
+                    아카라이브
+                </span>
+            
+                </div>
+                <h3 class="deal-title">오타후쿠 오무라이스소스, 300g, 1개</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">2,720원</span>
+                        
+                        <span class="relative-time time-recent">51분전</span>
+                        <span class="deal-comment-count" aria-label="댓글 수">
+               <i class="fa-regular fa-comment-dots" aria-hidden="true"></i>
+               <span>3</span>
+           </span>
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:20</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="도밍고-꿀홍차-20티백-145f" data-id="225585" href="/도밍고-꿀홍차-20티백-145f">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/20-ba87-ea5d6cb2b3d985acdc5da9eaffa9071f4196ef3785e81f966297f7ea8abd74e7.webp" alt="도밍고 꿀홍차 20티백" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">톡딜</span>
+                    
+                <span class="community-favicon" title="아카라이브">
+                    <img src="https://hotdeal.zip/site_favicon/arcalive.ico" alt="아카라이브" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;아카라이브';">
+                    아카라이브
+                </span>
+            
+                </div>
+                <h3 class="deal-title">도밍고 꿀홍차 20티백</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">5,900원</span>
+                        
+                        <span class="relative-time time-recent">53분전</span>
+                        <span class="deal-comment-count" aria-label="댓글 수">
+               <i class="fa-regular fa-comment-dots" aria-hidden="true"></i>
+               <span>7</span>
+           </span>
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:18</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="롯데웰푸드-목캔디-허브민트-217g-6개-ba0f" data-id="225584" href="/롯데웰푸드-목캔디-허브민트-217g-6개-ba0f">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/217g-6-c2b0-a52293599558ed90bb3446233cc3eeea7966e900af5fcc1af9d5e37947676d4a.webp" alt="롯데웰푸드 목캔디 허브민트, 217g, 6개" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">쿠팡</span>
+                    
+                <span class="community-favicon" title="아카라이브">
+                    <img src="https://hotdeal.zip/site_favicon/arcalive.ico" alt="아카라이브" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;아카라이브';">
+                    아카라이브
+                </span>
+            
+                </div>
+                <h3 class="deal-title">롯데웰푸드 목캔디 허브민트, 217g, 6개</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">14,400원</span>
+                        
+                        <span class="relative-time time-recent">59분전</span>
+                        <span class="deal-comment-count" aria-label="댓글 수">
+               <i class="fa-regular fa-comment-dots" aria-hidden="true"></i>
+               <span>1</span>
+           </span>
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:12</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="프렘-더-슬림-음식물처리기-p260-화이트-1개-a864" data-id="225583" href="/프렘-더-슬림-음식물처리기-p260-화이트-1개-a864">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/p260-1-a864-461996699d9c0e5177dc22b1959b036bb6955253bbdb0f394c975a28360c3364.webp" alt="프렘 더 슬림 음식물처리기, P260, 화이트, 1개" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">가전</span>
+                    <span class="deal-site">토스쇼핑</span>
+                    
+                </div>
+                <h3 class="deal-title">프렘 더 슬림 음식물처리기, P260, 화이트, 1개</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">172,000원</span>
+                        
+                        <span class="relative-time time-recent">1시간전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:10</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="대한민국농수산-뼈없는-한돈-양념갈비-300g-5팩-46cd" data-id="225582" href="/대한민국농수산-뼈없는-한돈-양념갈비-300g-5팩-46cd">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/300g-5-46cd-3b815a4bbf3afc35a52dc82f1f5232bd1e5c3828e2a653e904ea73bcc524dd64.webp" alt="대한민국농수산 뼈없는 한돈 양념갈비, 300g, 5팩" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">식품</span>
+                    <span class="deal-site">토스쇼핑</span>
+                    
+                </div>
+                <h3 class="deal-title">대한민국농수산 뼈없는 한돈 양념갈비, 300g, 5팩</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">21,300원</span>
+                        
+                        <span class="relative-time time-recent">1시간전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:10</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a><a class="deal-item" data-seo-url="히말라야-립케어-오리지널-비건-립밤-10g3개미니립밤-3개-9c42" data-id="225581" href="/히말라야-립케어-오리지널-비건-립밤-10g3개미니립밤-3개-9c42">
+        <div class="deal-content">
+            <div class="deal-image">
+            <img src="https://image.hotdeal.zip/thumbnails/2026/10/09/10g3-3-7920-2854-a9902ebb7a33ab4c49080a8ddc15fa9b5efef31c6adfdcbb2abf607aaa550ded.webp" alt="히말라야 립케어 오리지널 비건 립밤 10g*3개+미니립밤 3개" onerror="this.parentElement.innerHTML='&lt;div class=\'deal-image-placeholder\' style=\'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\'&gt; 📦&lt;/div&gt;';">
+            
+           </div>
+            <div class="deal-info">
+                <div class="deal-meta">
+                    <span class="deal-category">화장품</span>
+                    <span class="deal-site">롯데온</span>
+                    
+                <span class="community-favicon" title="뽐뿌">
+                    <img src="https://hotdeal.zip/site_favicon/ppomppu.ico" alt="뽐뿌" onerror="this.parentElement.innerHTML='&lt;span class=\'community-favicon-emoji\'&gt;🌐&lt;/span&gt;뽐뿌';">
+                    뽐뿌
+                </span>
+            
+                </div>
+                <h3 class="deal-title">히말라야 립케어 오리지널 비건 립밤 10g*3개+미니립밤 3개</h3>
+                <div class="deal-price-section">
+                    <div class="deal-prices">
+                        <span class="current-price">7,920원</span>
+                        
+                        <span class="relative-time time-recent">1시간전</span>
+                        
+                    </div>
+                    <div class="deal-actions">
+                        <span class="deal-time">18:08</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a></div>
+        
+        <div id="no-deals" style="display: none;">
+            <div class="deals-list">
+                <div class="no-deals">
+                    <p>등록된 핫딜이 없습니다.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="load-more-container" id="load-more-container" style="display: block;">
+            <button id="load-more-btn" class="load-more-btn" onclick="loadMoreDeals()">
+                더보기
+            </button>
+        </div>
+    </div>
+</main>
+
+<script src="/js/deals_request_monitor.js?v=2026081902"></script>
+<script>
+    // 메인 페이지용 전역 변수 설정
+    window.currentCategory = 'all';
+    window.currentPage = 0;
+    
+    // 페이지 로드 시 첫 번째 데이터 로드
+    document.addEventListener('DOMContentLoaded', function() {
+        // 새로고침인 경우 초기 로드만 실행
+        if (window.isPageReloaded) {
+            loadInitialDeals();
+            return;
+        }
+        
+        // 뒤로가기/직접 접속으로 돌아온 경우 (해시가 있고 새로고침이 아닌 경우)
+        const currentHash = window.location.hash.substring(1);
+        if (currentHash && !isReload) {
+            const params = new URLSearchParams(currentHash);
+            const targetPage = parseInt(params.get('page'));
+            if (targetPage && targetPage >= 1) {
+                // restoreStateFromHash가 처리할 것이므로 건너뛰기
+                console.log('🔄 URL 해시에 페이지 정보가 있어 초기 로드 건너뜀');
+                return;
+            }
+        }
+        
+        loadInitialDeals();
+    });
+    
+    async function getDealListCacheParam() {
+        return window.HDZDealListVersion.getCacheParam('all', { forceRefresh: true });
+    }
+
+    // 초기 딜 데이터 로드 함수
+    function loadInitialDeals() {
+        const initialLoading = document.getElementById('initial-loading');
+        const dealsList = document.getElementById('deals-list');
+        const noDeals = document.getElementById('no-deals');
+        const loadMoreContainer = document.getElementById('load-more-container');
+        
+        getDealListCacheParam()
+            .then(cacheParam => {
+                let apiUrl = `/api/deals.php?page=1&category=all&${cacheParam}`;
+
+                // 커뮤니티 필터 파라미터 추가
+                if (window.communityFilterManager) {
+                    const communitiesParam = window.communityFilterManager.getCommunitiesParam();
+                    if (communitiesParam) {
+                        apiUrl += `&communities=${encodeURIComponent(communitiesParam)}`;
+                    }
+                }
+
+                window.HDZLastDealsRequestUrl = apiUrl;
+                return window.HDZDealsRequestMonitor.fetchJson(apiUrl);
+            })
+            .then(data => {
+                if (initialLoading) {
+                    initialLoading.style.display = 'none';
+                }
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    if (dealsList) {
+                        dealsList.style.display = 'block';
+                        appendDeals(data.data);
+                        window.currentPage = 1;
+                        
+                        // 첫 페이지 로드 완료 후 URL 해시 확인
+                        const hash = window.location.hash.substring(1);
+                        if (hash) {
+                            const params = new URLSearchParams(hash);
+                            const viewedProduct = params.get('viewed');
+                            const timestamp = parseInt(params.get('ts'));
+                            
+                            // 타임스탬프 유효성 검증 (30분)
+                            const VALID_DURATION = 30 * 60; // 30분 (초 단위)
+                            const BASE_TIME = 1735689600000; // new Date('2025-01-01').getTime()
+                            const now = Math.floor((Date.now() - BASE_TIME) / 1000);
+                            
+                            if (timestamp && (now - timestamp) > VALID_DURATION) {
+                                console.log('⏰ 해시 만료됨 (30분 경과). 복원 건너뜀');
+                                // 만료된 해시 제거
+                                window.location.hash = '';
+                                history.replaceState(null, '', window.location.pathname + window.location.search);
+                                return;
+                            }
+                            
+                            if (viewedProduct) {
+                                console.log('🔍 첫 페이지 로드 후 URL 해시에서 방금 본 상품 발견:', viewedProduct);
+                                
+                                // 상품이 현재 페이지에 있는지 확인
+                                setTimeout(() => {
+                                    const productElement = document.querySelector(`.deal-item[data-id="${viewedProduct}"]`);
+                                    if (productElement) {
+                                        // 상품을 찾았으면 하이라이트 및 스크롤
+                                        highlightViewedProduct(viewedProduct);
+                                        scrollToViewedProduct(viewedProduct);
+                                    } else if (data.pagination && data.pagination.has_more) {
+                                        // 상품을 못 찾았고 다음 페이지가 있으면 페이지 2 로드
+                                        console.log('🔄 첫 페이지에서 상품을 찾지 못해 페이지 2를 로드합니다');
+                                        
+                                        // NEW 구분선 추가
+                                        addNewContentDivider();
+                                        
+                                        loadMoreDeals().then(() => {
+                                            // 페이지 2 로드 후 다시 확인
+                                            setTimeout(() => {
+                                                const productElementPage2 = document.querySelector(`.deal-item[data-id="${viewedProduct}"]`);
+                                                if (productElementPage2) {
+                                                    highlightViewedProduct(viewedProduct);
+                                                    scrollToViewedProduct(viewedProduct);
+                                                } else {
+                                                    console.log('⚠️ 페이지 2에서도 상품을 찾지 못했습니다');
+                                                }
+                                            }, 100);
+                                        });
+                                    }
+                                }, 200);
+                            }
+                        }
+                    }
+                    
+                    if (data.pagination && data.pagination.has_more && loadMoreContainer) {
+                        loadMoreContainer.style.display = 'block';
+                    }
+                    
+                    console.log(`메인 페이지 - ${data.data.length}개의 핫딜 로드 완료`);
+                } else {
+                    if (noDeals) {
+                        noDeals.style.display = 'block';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('초기 데이터 로딩 실패:', error);
+                window.HDZDealsRequestMonitor.reportFailure(error, 'all');
+                
+                if (initialLoading) {
+                    initialLoading.style.display = 'none';
+                }
+                
+                // 에러 메시지 표시 (새로운 클래스명 사용)
+                const container = document.querySelector('.container');
+                if (container) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'hotdeal-error-message';
+                    errorDiv.innerHTML = `
+                        <p>데이터를 불러오는 중 오류가 발생했습니다.</p>
+                        <button onclick="loadInitialDeals()" class="hotdeal-retry-btn">다시 시도</button>
+                    `;
+                    container.appendChild(errorDiv);
+                }
+            });
+    }
+</script>
+
+<style>
+    /* 푸터 스타일 - 다크모드 지원 */
+    .footer {
+        background: var(--surface-color);
+        border-top: 1px solid var(--border-color);
+        margin-top: 60px;
+        padding: 20px 0;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .footer-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .footer-links {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .footer-links a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 12px;
+        transition: color 0.3s ease;
+    }
+
+    .footer-links a:hover {
+        color: var(--accent-color);
+    }
+
+    /* 앱 스토어 링크 스타일 */
+    .app-store-links {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .app-store-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .app-store-link.play-store {
+        background: linear-gradient(135deg, #34A853, #4285F4);
+    }
+
+    .app-store-link.app-store {
+        background: linear-gradient(135deg, #007AFF, #0056B3);
+    }
+
+    .app-store-link.app-store.disabled {
+        background: var(--border-color);
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .app-store-link i {
+        color: white;
+        font-size: 18px;
+        z-index: 1;
+        position: relative;
+    }
+
+    .app-store-link.app-store.disabled i {
+        color: var(--text-secondary);
+    }
+
+    .app-store-link:hover:not(.disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .app-store-link::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.2) 50%, transparent 70%);
+        transform: translateX(-100%);
+        transition: transform 0.6s ease;
+    }
+
+    .app-store-link:hover:not(.disabled)::before {
+        transform: translateX(100%);
+    }
+
+    /* 툴팁 스타일 */
+    .app-store-link::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--text-primary);
+        color: var(--surface-color);
+        padding: 6px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        margin-bottom: 8px;
+        z-index: 1000;
+    }
+
+    .app-store-link:hover::after {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(-4px);
+    }
+
+    /* 접근성을 위한 시각적 숨김 클래스 */
+    .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    /* 반응형 */
+    @media (max-width: 768px) {
+        .footer-links {
+            gap: 16px;
+        }
+
+        .app-store-links {
+            gap: 16px;
+        }
+
+        .app-store-link {
+            width: 36px;
+            height: 36px;
+        }
+
+        .app-store-link i {
+            font-size: 20px;
+        }
+    }
+</style>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="/notices.php">공지사항</a>
+                <a href="/terms.php">이용약관</a>
+                <a href="/privacy.php">개인정보처리방침</a>
+                <a href="/contact.php">문의하기</a>
+            </div>
+            
+            <div class="app-store-links">
+                <a href="https://play.google.com/store/apps/details?id=zip.hotdeal.app" target="_blank" class="app-store-link play-store" data-tooltip="Google Play에서 다운로드" aria-label="Google Play에서 핫딜집 앱 다운로드">
+                    <i class="fa-brands fa-google-play" aria-hidden="true"></i>
+                    <span class="visually-hidden">Google Play에서 다운로드</span>
+                </a>
+                <a href="https://apps.apple.com/kr/app/%ED%95%AB%EB%94%9C%EB%AA%A8%EC%9D%8C-%EB%AA%A8%EB%93%A0-%EC%BB%A4%EB%AE%A4%EB%8B%88%ED%8B%B0-%ED%95%AB%EB%94%9C-%ED%95%AB%EB%94%9C%EC%95%8C%EB%A6%BC/id6752360116" target="_blank" class="app-store-link app-store" data-tooltip="App Store에서 다운로드" aria-label="App Store에서 핫딜집 앱 다운로드">
+                    <i class="fa-brands fa-app-store" aria-hidden="true"></i>
+                    <span class="visually-hidden">App Store에서 다운로드</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<button id="scroll-to-top" class="scroll-to-top" title="맨 위로" aria-label="맨 위로 이동">
+    <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+</button>
+
+<div id="web-notification-widget" class="web-notification-widget">
+    <button id="web-notification-button" class="web-notification-button" type="button" title="알림" aria-label="알림" aria-expanded="false" aria-controls="web-notification-panel">
+        <i class="fa-solid fa-bell" aria-hidden="true"></i>
+        <span id="web-notification-badge" class="web-notification-badge" hidden="">0</span>
+    </button>
+    <section id="web-notification-panel" class="web-notification-panel" aria-label="알림 목록" hidden="">
+        <div class="web-notification-panel-header">
+            <strong>알림</strong>
+            <div class="web-notification-panel-actions">
+                <button id="web-notification-mark-all" type="button">모두 읽음</button>
+                <span class="web-notification-action-separator" aria-hidden="true"></span>
+                <button id="web-notification-delete-all" type="button">전체 삭제</button>
+            </div>
+        </div>
+        <div id="web-notification-list" class="web-notification-list">
+            <div class="web-notification-empty">알림이 없습니다.</div>
+        </div>
+    </section>
+</div>
+
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;3a6581f2281a47318d063427f262d8d1&quot;,&quot;spa&quot;:2}" crossorigin="anonymous"></script>
+<script>window.__CF$cv$params={r:'a47b9e825c8ba739',t:'MTc5MTUzMDM4OA==',u:'019e8c3b6fef7c72bb14d9a9bb7f1464',ut:'AdGoymRAVCdM2h_kAKKlgZpXDzQw3IMC_yKnto_wnSI-1791530388-1.2.1.1-aamQvHhSBGTAj92.8eHsjYX3ypHN0rBaVvA787QRb0KDbXi.dVyUNe10fvF0Y6HcdZgUBakI8rzgYpD09tOyxNOVnNiN0iGcpycybBDKWnc',i:60};(function(){if(!document.body)return;var s=document.createElement('script');s.src='/cdn-cgi/challenge-platform/scripts/precursor/main.js';document.head.appendChild(s);})();</script>
+
+</body><div id="keap-root" data-keap-ui="true"></div></html>

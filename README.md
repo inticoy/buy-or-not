@@ -1,6 +1,6 @@
 # 살래말래
 
-알구몬 랭킹에서 게임·IT·식품 핫딜 TOP 10을 골라 매일 12:00 KST에 Discord로 보내는 봇입니다.
+hotdeal.zip 인기 핫딜 TOP 10을 매일 12:00 KST에 Discord로 보내는 봇입니다.
 
 동작 방식과 버전별 계획은 [docs/](docs/)에 있습니다.
 
@@ -27,7 +27,8 @@ cp .env.example .env   # 토큰·채널 ID 채우기
 
 ```bash
 .venv/bin/python -m app run-once --dry-run   # 전송 없이 출력만
-.venv/bin/python -m app run-once             # BOT_ENV 채널로 전송
+.venv/bin/python -m app run-once             # BOT_ENV 채널로 전송 (hotdeal.zip 인기 TOP 10)
+.venv/bin/python -m app run-once --source algumon   # 알구몬 게임·IT·식품 랭킹
 .venv/bin/python -m unittest discover -s tests
 ```
 

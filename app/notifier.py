@@ -17,6 +17,7 @@ RANK_EMOJI = {1: "🥇", 2: "🥈", 3: "🥉"}
 DAYS_KO = ["월", "화", "수", "목", "금", "토", "일"]
 
 CATEGORY_COLOR = {
+    "hot": 0xED4245,  # hotdeal.zip 인기 — 빨강
     6: 0x5865F2,  # 게임  — 블루퍼플
     2: 0x00B0F4,  # IT   — 하늘
     3: 0xFEE75C,  # 식품  — 노랑
@@ -63,7 +64,7 @@ def _build_message(deals, color, header: str | None = None):
     return {"flags": 32768, "components": components}  # IS_COMPONENTS_V2
 
 
-def post_daily(date, category_id: int, category_name: str, emoji: str,
+def post_daily(date, category_id: int | str, category_name: str, emoji: str,
                deals: list, dry_run: bool = False) -> str:
     name = _thread_name(date, category_name, emoji)
     color = CATEGORY_COLOR.get(category_id, 0x99AAB5)

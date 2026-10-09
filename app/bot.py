@@ -9,7 +9,7 @@ import discord
 from . import board, hotdealzip, nl, people
 from .collector import fetch_rank
 from .matcher import keyword_match
-from .notifier import CATEGORY_COLOR, _build_message, _mentions, send_message
+from .notifier import CATEGORY_COLOR, _build_message, message_link, send_dm, send_message
 from .store import Store
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,12 @@ class Handler:
             head = f"<@{owner}>님, 알림 설정 완료!"
         else:
             head = f"<@{owner}>님, <@{sender}>님이 알림을 걸어줬어요!"
-        return _text(f"🔔 {head} {target}{price} 핫딜이 올라오면 바로 알려드릴게요.{tail}", [owner])
+        payload = _text(f"🔔 {head} {target}{price} 핫딜이 올라오면 바로 알려드릴게요.{tail}", [owner])
+        if owner != sender:
+            # 스레드 글은 조용히 가므로, 대신 걸린 사람에게는 DM으로 알린다
+            payload["_dm"] = (owner, f"🔔 {board.who(sender)}님이 '{want}' 알림을 걸어줬어요! "
+                                     f"{target}{price} 핫딜이 올라오면 DM으로 알려드릴게요.{tail}")
+        return payload
 
     def remove_watch(self, sender: str, args: dict) -> dict:
         mine = {w["id"]: w for w in self.store.related_watches(sender)}
@@ -168,6 +173,10 @@ def run():
                 if action is None:
                     continue
                 payload = await asyncio.to_thread(action, sender, args)
-                await send(payload)
+                dm = payload.pop("_dm", None)
+                message_id = await send(payload)
+                if dm:
+                    link = await asyncio.to_thread(message_link, channel, message_id)
+                    await asyncio.to_thread(send_dm, dm[0], f"{dm[1]}\n→ {link}")
 
     client.run(os.environ["DISCORD_BOT_TOKEN"], log_handler=None)

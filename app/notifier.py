@@ -14,6 +14,8 @@ API_BASE = "https://discord.com/api/v10"
 PLACEHOLDER_IMG = "https://raw.githubusercontent.com/inticoy/buy-or-not/main/assets/placeholder.png"
 
 RANK_EMOJI = {1: "🥇", 2: "🥈", 3: "🥉"}
+# @silent: 스레드 글은 아무에게도 푸시가 가지 않게 하고, 받아야 할 사람에게는 DM을 따로 보낸다
+SUPPRESS_NOTIFICATIONS = 1 << 12
 DAYS_KO = ["월", "화", "수", "목", "금", "토", "일"]
 
 CATEGORY_COLOR = {
@@ -82,7 +84,7 @@ def post_daily(date, category_id: int | str, category_name: str, emoji: str,
 
         resp = requests.post(
             f"{API_BASE}/channels/{THREAD_ID}/messages",
-            json=message,
+            json=_silent(message),
             headers={"Authorization": f"Bot {BOT_TOKEN}"},
             timeout=10,
         )
@@ -103,7 +105,7 @@ def post_daily(date, category_id: int | str, category_name: str, emoji: str,
 
     resp = requests.post(
         f"{API_BASE}/channels/{CHANNEL_ID}/threads",
-        json={"name": name, "message": message},
+        json={"name": name, "message": _silent(message)},
         headers={"Authorization": f"Bot {BOT_TOKEN}"},
         timeout=10,
     )
@@ -118,8 +120,44 @@ def post_daily(date, category_id: int | str, category_name: str, emoji: str,
 ALERT_COLOR = 0xF0B232  # 관심사 알림 — 주황
 
 
-def send_message(channel_id: str, message: dict, reply_to: str | None = None) -> str:
-    """Post a raw message payload and return its id."""
+def _silent(message: dict) -> dict:
+    return message | {"flags": message.get("flags", 0) | SUPPRESS_NOTIFICATIONS}
+
+
+_guild_ids = {}
+
+
+def message_link(channel_id: str, message_id: str) -> str:
+    if channel_id not in _guild_ids:
+        resp = requests.get(f"{API_BASE}/channels/{channel_id}",
+                            headers={"Authorization": f"Bot {BOT_TOKEN}"}, timeout=10)
+        _guild_ids[channel_id] = resp.json().get("guild_id", "@me") if resp.ok else "@me"
+    return f"https://discord.com/channels/{_guild_ids[channel_id]}/{channel_id}/{message_id}"
+
+
+def send_dm(user_id: str, content: str) -> bool:
+    """DM으로 푸시를 보낸다. 상대가 서버 멤버 DM을 막았으면 False."""
+    headers = {"Authorization": f"Bot {BOT_TOKEN}"}
+    try:
+        dm = requests.post(f"{API_BASE}/users/@me/channels", json={"recipient_id": user_id},
+                           headers=headers, timeout=10)
+        dm.raise_for_status()
+        resp = requests.post(f"{API_BASE}/channels/{dm.json()['id']}/messages",
+                             json={"content": content, "flags": 4},  # 4: 링크 미리보기 숨김
+                             headers=headers, timeout=10)
+        resp.raise_for_status()
+        return True
+    except requests.RequestException as e:
+        detail = e.response.text[:200] if getattr(e, "response", None) is not None else e
+        logger.warning("DM to %s failed: %s", user_id, detail)
+        return False
+
+
+def send_message(channel_id: str, message: dict, reply_to: str | None = None,
+                 silent: bool = True) -> str:
+    """Post a raw message payload and return its id. Silent by default."""
+    if silent:
+        message = _silent(message)
     if reply_to:
         message = message | {"message_reference": {"message_id": reply_to, "fail_if_not_exists": False}}
     resp = requests.post(
@@ -172,10 +210,17 @@ def build_alert(hits: list, deal: dict) -> dict:
 
 
 def post_alert(hits: list, deal: dict, dry_run: bool = False) -> None:
-    """관심사에 맞는 딜을 핫딜 thread에 대상자 태그와 함께 보낸다."""
+    """관심사에 맞는 딜을 핫딜 thread에 조용히 올리고, 대상자마다 DM으로 알린다."""
     message = build_alert(hits, deal)
     if dry_run:
         print(f"\n[DRY RUN] alert → {message['components'][0]['content']}")
         return
-    send_message(THREAD_ID or CHANNEL_ID, message)
+    channel = THREAD_ID or CHANNEL_ID
+    link = message_link(channel, send_message(channel, message))
+    price = deal.get("price_str") or "가격 미확인"
+    where = deal.get("shop") or deal.get("community") or "커뮤니티"
+    for owner in dict.fromkeys(h["owner_id"] for h in hits):
+        wants = " / ".join(dict.fromkeys(f"'{h['want']}'" for h in hits if h["owner_id"] == owner))
+        send_dm(owner, f"🔔 {wants} 알림 · {where}에서 **{deal['title']}** 핫딜이 떴어요! ({price})\n"
+                       f"→ {link}")
     logger.info("alert sent: %s → %s", [h["want"] for h in hits], deal["title"])

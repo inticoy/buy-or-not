@@ -13,7 +13,7 @@ load_dotenv()
 
 import requests
 
-from . import hotdealzip, matcher
+from . import board, hotdealzip, matcher
 from .browser import BrowserFetchError, fetch_html
 from .collector import fetch_rank
 from .notifier import post_alert, post_daily
@@ -117,6 +117,7 @@ def run_watch(dry_run: bool = False, deals: list | None = None, store: Store | N
             store.mark_notified(hit["watch"]["id"], deal["group_key"], deal.get("price"))
             if hit["watch"]["once"]:
                 store.deactivate(hit["watch"]["id"])
+                board.update(store)
     return True
 
 
@@ -151,9 +152,12 @@ def main():
     p.add_argument("--by", help="등록한 사람 Discord ID (대신 등록할 때)")
     sub.add_parser("watch-list")
     sub.add_parser("serve", help="@멘션 자연어 봇 (상주)")
+    sub.add_parser("board", help="고정된 '알림 키워드' 메시지 갱신")
     args = parser.parse_args()
 
-    if args.cmd == "serve":
+    if args.cmd == "board":
+        board.update()
+    elif args.cmd == "serve":
         from .bot import run
         run()
     elif args.cmd == "snapshot":

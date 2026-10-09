@@ -6,7 +6,7 @@ import re
 
 import discord
 
-from . import hotdealzip, nl, people
+from . import board, hotdealzip, nl, people
 from .collector import fetch_rank
 from .matcher import keyword_match
 from .notifier import CATEGORY_COLOR, _build_message, _mentions, send_message
@@ -30,28 +30,12 @@ def _text(content: str, mention_ids: list | None = None) -> dict:
     return {"content": content, "allowed_mentions": {"users": mention_ids or []}}
 
 
-def _won(price: int) -> str:
-    return f"{price // 10000}만원" if price % 10000 == 0 else f"{price:,}원"
-
-
 def _ago(iso: str) -> str:
     from datetime import datetime
     minutes = int((datetime.now().astimezone() - datetime.fromisoformat(iso)).total_seconds() // 60)
     if minutes < 60:
         return f"{max(minutes, 1)}분 전"
     return f"{minutes // 60}시간 전" if minutes < 24 * 60 else f"{minutes // 1440}일 전"
-
-
-def _who(discord_id: str) -> str:
-    return people.name_of(discord_id) or f"<@{discord_id}>"
-
-
-def _describe(watch: dict) -> str:
-    how = f"키워드 {', '.join(watch['keywords'])}" if watch["keywords"] else "AI 판단"
-    extra = (f" · {_won(watch['max_price'])} 이하" if watch["max_price"] else "") \
-        + (" · 한 번만" if watch["once"] else "")
-    by = f" · {_who(watch['created_by'])}님이 걸어줌" if watch["created_by"] != watch["owner_id"] else ""
-    return f"• **{watch['want']}** ({how}{extra}{by})"
 
 
 class Handler:
@@ -65,9 +49,10 @@ class Handler:
         want, keywords = args["want"], args.get("keywords") or None
         max_price, once = args.get("max_price"), bool(args.get("once"))
         self.store.add_watch(owner, want, keywords, max_price, once, created_by=sender)
+        board.update(self.store)
 
         target = f"'{'/'.join(keywords)}' 키워드로" if keywords else f"'{want}'에 맞는"
-        price = f" {_won(max_price)} 이하" if max_price else ""
+        price = f" {board.won(max_price)} 이하" if max_price else ""
         tail = " 한 번 알려드리면 자동으로 꺼져요." if once else ""
         if owner == sender:
             head = f"<@{owner}>님, 알림 설정 완료!"
@@ -80,6 +65,8 @@ class Handler:
         removed = [mine[i] for i in args.get("watch_ids", []) if i in mine]
         for w in removed:
             self.store.deactivate(w["id"])
+        if removed:
+            board.update(self.store)
         if not removed:
             return _text("어떤 알림을 끌지 못 찾았어요. `내 알림 목록`으로 확인해 주세요!")
         return _text("🔕 " + ", ".join(f"'{w['want']}'" for w in removed) + " 알림을 껐어요.")
@@ -90,18 +77,15 @@ class Handler:
         if args.get("everyone"):
             if not watches:
                 return _text("아직 아무도 알림을 걸어두지 않았어요.")
-            owners = list(dict.fromkeys(w["owner_id"] for w in watches))
-            blocks = [f"**{_who(o)}**\n" + "\n".join(_describe(w) for w in watches if w["owner_id"] == o)
-                      for o in owners]
-            return _text(f"🔔 지금 걸려 있는 알림 {len(watches)}개예요\n\n" + "\n\n".join(blocks))
+            return _text(f"🔔 지금 걸려 있는 알림 {len(watches)}개예요\n\n" + board.grouped(watches))
 
         who = people.resolve(args["for_user"]) if args.get("for_user") else sender
         if who is None:
             return _text(f"'{args['for_user']}'님이 누군지 모르겠어요.")
         mine = [w for w in watches if w["owner_id"] == who]
         if not mine:
-            return _text(f"{_who(who)}님은 아직 걸어둔 알림이 없어요.")
-        return _text(f"🔔 {_who(who)}님이 받는 알림이에요\n" + "\n".join(_describe(w) for w in mine))
+            return _text(f"{board.who(who)}님은 아직 걸어둔 알림이 없어요.")
+        return _text(f"🔔 {board.who(who)}님이 받는 알림이에요\n" + "\n".join(board.describe(w) for w in mine))
 
     def search_deals(self, sender: str, args: dict) -> dict:
         query, max_price = args["query"], args.get("max_price")

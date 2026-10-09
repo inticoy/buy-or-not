@@ -5,6 +5,7 @@ import os
 import re
 
 import discord
+import requests
 
 from . import board, hotdealzip, nl, people
 from .collector import fetch_rank
@@ -24,6 +25,7 @@ HELP = ("이렇게 말해주세요 🙂\n"
         "• `메가커피 올라왔어?` (최근 3일 딜 검색)\n"
         "• `오늘 게임 핫딜 뭐 있어?`")
 SEARCH_LIMIT = 5
+HEARTBEAT_S = 5 * 60  # Healthchecks period 20분·grace 10분보다 충분히 짧게
 
 
 def _text(content: str, mention_ids: list | None = None) -> dict:
@@ -133,9 +135,24 @@ def run():
     handler = Handler(store)
     client = discord.Client(intents=discord.Intents.default())
 
+    async def heartbeat():
+        """맥이 잠들거나 꺼지면 신호가 끊겨 Healthchecks가 Down/Up을 알린다."""
+        url = os.environ.get("HEALTHCHECK_SERVE_URL")
+        if not url:
+            return
+        while True:
+            try:
+                await asyncio.to_thread(requests.get, url, timeout=10)
+            except requests.RequestException as e:
+                logger.warning("healthcheck ping failed: %s", e)
+            await asyncio.sleep(HEARTBEAT_S)
+
     @client.event
     async def on_ready():
         logger.info("bot ready as %s", client.user)
+        # on_ready는 재연결 때마다 불리므로 신호 작업은 한 번만 띄운다
+        if not getattr(client, "_heartbeat", None):
+            client._heartbeat = asyncio.create_task(heartbeat())
 
     @client.event
     async def on_message(msg: discord.Message):

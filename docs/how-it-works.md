@@ -83,4 +83,5 @@ launchctl kickstart gui/$(id -u)/com.inticoy.buy-or-not  # 즉시 실행 (PROD �
 v3 소스 조사용으로 `com.inticoy.buy-or-not.snapshot`이 하루 4번(09·15·21·23:50) hotdeal.zip 인기 HTML과 최신 목록을 `data/snapshots/`에 저장합니다. 조사가 끝나면 지웁니다.
 
 - 12:00에 Mac이 꺼져 있거나 로그아웃 상태면 실행되지 않습니다. 잠자기 중이었다면 깨어날 때 한 번 실행됩니다.
-- `HEALTHCHECK_BUY_OR_NOT_URL`을 넣으면 성공·실패를 Healthchecks.io로 보고합니다.
+- `HEALTHCHECK_BUY_OR_NOT_URL`을 넣으면 매일 TOP 10 성공·실패를 Healthchecks.io로 보고합니다.
+- `HEALTHCHECK_SERVE_URL`을 넣으면 상주 봇이 5분마다 신호를 보냅니다. 맥이 잠들거나 꺼져 30분(period 20분 + grace 10분) 동안 신호가 없으면 Healthchecks가 Down, 돌아오면 Up을 알립니다. 관심사 수집 실패는 이 check로 잡지 않고 `logs/watch.log`에만 남습니다.

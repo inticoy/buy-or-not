@@ -20,7 +20,8 @@ cp .env.example .env   # 토큰·채널 ID 채우기
 | `DISCORD_THREAD_DEV` / `_PROD` | 선택: 고정 thread에 댓글로 보낼 때 |
 | `CHROME_PROFILE` | 선택: 알구몬을 열 Chrome 프로필 (기본 `Default`) |
 | `GEMINI_API_KEY` | Google AI Studio에서 발급한 Gemini API 키 (말 해석·설명형 판단) |
-| `HEALTHCHECK_BUY_OR_NOT_URL` | 선택: Healthchecks.io 핑 URL |
+| `HEALTHCHECK_BUY_OR_NOT_URL` | 선택: 매일 TOP 10 성공·실패를 Healthchecks.io로 |
+| `HEALTHCHECK_SERVE_URL` | 선택: 상주 봇이 5분마다 신호 → 맥 잠자기·꺼짐 감지 (check: period 20분, grace 10분) |
 
 **Chrome 설정:** 보기 → 개발자 정보 → **Apple 이벤트의 자바스크립트 허용**을 켭니다. 사용할 프로필 창에서 켜야 합니다.
 

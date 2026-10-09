@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>살래말래 수집 흐름</title>
+<title>살래말래 동작 흐름</title>
 <style>
 :root{
   --bg:#f6f7f9; --card:#fff; --text:#1c2230; --muted:#667085; --line:#d5dae3;
@@ -12,6 +12,7 @@
   --ok-bg:#e6f6ec; --ok-bd:#3fa968; --ok-tx:#1b6b3a;
   --warn-bg:#fff4dc; --warn-bd:#e0a21b; --warn-tx:#7a5200;
   --blue-bg:#e5f0ff; --blue-bd:#3b82f6; --blue-tx:#1d4ed8;
+  --ai-bg:#f1eaff; --ai-bd:#8b5cf6; --ai-tx:#5b21b6;
 }
 @media (prefers-color-scheme: dark){
   :root{
@@ -21,16 +22,17 @@
     --ok-bg:#16301f; --ok-bd:#3fa968; --ok-tx:#8de0ab;
     --warn-bg:#3a2e12; --warn-bd:#e0a21b; --warn-tx:#f5cf74;
     --blue-bg:#16294a; --blue-bd:#4c8dff; --blue-tx:#9cc2ff;
+    --ai-bg:#2a1f45; --ai-bd:#a78bfa; --ai-tx:#d4c4ff;
   }
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);
   font:15px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif}
-main{max-width:1000px;margin:0 auto;padding:32px 16px 56px}
+main{max-width:1180px;margin:0 auto;padding:32px 16px 56px}
 h1{margin:0 0 6px;font-size:26px}
 .sum{margin:0 0 20px;color:var(--muted)}
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
-@media (max-width:760px){.cols{grid-template-columns:1fr}}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start}
+@media (max-width:960px){.cols{grid-template-columns:1fr}}
 .col{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 16px}
 .col h2{margin:0 0 2px;font-size:18px}
 .col .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
@@ -41,19 +43,20 @@ h1{margin:0 0 6px;font-size:26px}
 .n-ok{background:var(--ok-bg);border-color:var(--ok-bd);color:var(--ok-tx)}
 .n-warn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn-tx)}
 .n-blue{background:var(--blue-bg);border-color:var(--blue-bd);color:var(--blue-tx)}
+.n-ai{background:var(--ai-bg);border-color:var(--ai-bd);color:var(--ai-tx)}
 .n-dec{border-style:dashed;font-weight:600}
-.arrow{width:2px;height:18px;background:var(--line);position:relative;margin:0 auto}
+.arrow{width:2px;height:16px;background:var(--line);position:relative;margin:0 auto}
 .arrow::after{content:"";position:absolute;bottom:-1px;left:-4px;border:5px solid transparent;border-top:7px solid var(--line);border-bottom:0}
 .branches{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
 .br{display:flex;flex-direction:column;align-items:center}
-.br .lbl{font-size:11px;color:var(--muted);margin-bottom:4px}
+.br .lbl{font-size:11px;color:var(--muted);margin-bottom:4px;text-align:center}
 .br .node{font-size:13px;padding:8px}
 .legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin:0 0 18px;font-size:12px;color:var(--muted)}
 .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px;border:1.5px solid}
 h3{margin:30px 0 10px;font-size:17px}
 .tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
 table{border-collapse:collapse;width:100%;font-size:14px}
-th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line)}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td,tr:last-child th{border-bottom:0}
 thead th{background:var(--neutral-bg)}
 tbody th{font-weight:600;white-space:nowrap}
@@ -63,83 +66,107 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
 </head>
 <body>
 <main>
-  <h1>살래말래 수집 흐름</h1>
-  <p class="sum">알구몬은 의심스러운 요청에 Turnstile 챌린지를 겁니다. v1(requests)은 IP가 의심받는 순간 막혔고, v2는 평소 쓰는 Chrome을 AppleScript로 조종해 읽습니다.</p>
+  <h1>살래말래 동작 흐름</h1>
+  <p class="sum">맥의 launchd가 세 가지를 돌립니다. 사이트는 평소 쓰는 Chrome을 AppleScript로 열어 읽고(챌린지 회피), 말과 판단은 Gemini가 맡습니다. (v3, 2026-10-09)</p>
 
   <div class="legend">
     <span><i style="background:var(--neutral-bg);border-color:var(--neutral-bd)"></i>일반</span>
     <span><i style="background:var(--blue-bg);border-color:var(--blue-bd)"></i>Chrome</span>
-    <span><i style="background:var(--ok-bg);border-color:var(--ok-bd)"></i>성공</span>
+    <span><i style="background:var(--ai-bg);border-color:var(--ai-bd)"></i>Gemini</span>
+    <span><i style="background:var(--ok-bg);border-color:var(--ok-bd)"></i>Discord 전송</span>
     <span><i style="background:var(--fail-bg);border-color:var(--fail-bd)"></i>실패</span>
     <span><i style="background:var(--warn-bg);border-color:var(--warn-bd)"></i>수동 조치</span>
   </div>
 
   <div class="cols">
     <section class="col">
-      <h2>v1 · requests</h2>
-      <p class="sub">GitHub Actions → 로컬 launchd. JS를 실행하지 않는 단순 HTTP 요청</p>
+      <h2>🔥 매일 TOP 10</h2>
+      <p class="sub"><code>run-once</code> · 매일 12:00 · <code>com.inticoy.buy-or-not</code></p>
       <div class="flow">
-        <div class="node">매일 12:00 실행</div>
-        <div class="arrow"></div>
-        <div class="node">requests GET 랭킹 페이지</div>
-        <div class="arrow"></div>
-        <div class="node n-fail">403 <code>CHALLENGE_REQUIRED</code><small>Actions: 2026-07-22~ · 로컬: 2026-10-09~</small></div>
-        <div class="arrow"></div>
-        <div class="node n-fail">JS 실행 불가 → 챌린지 통과 불가</div>
-        <div class="arrow"></div>
-        <div class="node n-fail">"딜 없음" 로그 후 정상 종료<small>실패해도 success로 보여 아무도 모름</small></div>
-      </div>
-    </section>
-
-    <section class="col">
-      <h2>v2 · Chrome + AppleScript</h2>
-      <p class="sub">현재 방식. CDP 없이 평소 Chrome 프로필로 일반 방문</p>
-      <div class="flow">
-        <div class="node">launchd 매일 12:00 실행</div>
-        <div class="arrow"></div>
-        <div class="node n-blue">Chrome <code>Default</code> 프로필에 탭 열기</div>
+        <div class="node n-blue">hotdeal.zip <code>/인기</code> 열기</div>
         <div class="arrow"></div>
         <div class="node n-dec">챌린지 페이지인가?</div>
         <div class="arrow"></div>
         <div class="branches">
           <div class="br"><div class="lbl">아니오 (평소)</div>
-            <div class="node n-blue">AppleScript로 HTML 읽기 → 탭 닫기</div>
+            <div class="node">파싱 → 크로스포스트 제거 → 상위 10개</div>
             <div class="arrow"></div>
-            <div class="node">파싱 → 중복 제거 → TOP 10</div>
-            <div class="arrow"></div>
-            <div class="node n-ok">Discord 게시</div></div>
-          <div class="br"><div class="lbl">예 (45초 초과)</div>
+            <div class="node n-ok">핫딜 thread에 카드 게시</div></div>
+          <div class="br"><div class="lbl">예</div>
             <div class="node n-fail">탭 열어둔 채 실패</div>
             <div class="arrow"></div>
-            <div class="node n-warn">선택: 폰(orca relay)에서 탭 직접 체크</div>
+            <div class="node n-warn">선택: 폰에서 직접 체크</div>
             <div class="arrow"></div>
-            <div class="node">1시간 뒤 실패한 카테고리만 재시도</div>
-            <div class="arrow"></div>
-            <div class="node n-fail">또 실패하면 exit 1<small>Healthchecks 실패 핑</small></div></div>
+            <div class="node">1시간 뒤 재시도, 또 실패면 exit 1</div></div>
         </div>
+      </div>
+    </section>
+
+    <section class="col">
+      <h2>🔔 관심사 알림</h2>
+      <p class="sub"><code>watch</code> · 매시 30분 · <code>com.inticoy.buy-or-not.watch</code></p>
+      <div class="flow">
+        <div class="node n-blue">hotdeal.zip 최신 열기 → '더보기' 2번<small>75개, 약 1~3시간 분량</small></div>
+        <div class="arrow"></div>
+        <div class="node">처음 보는 딜만 SQLite에 기록<small>크로스포스트는 같은 그룹으로 묶음</small></div>
+        <div class="arrow"></div>
+        <div class="branches">
+          <div class="br"><div class="lbl">키워드 관심사</div>
+            <div class="node">제목에 단어가 모두 있나 + 가격 상한</div></div>
+          <div class="br"><div class="lbl">설명형 관심사</div>
+            <div class="node n-ai">새 딜 전체를 한 번에 물어 판단<small>고른 이유 포함</small></div></div>
+        </div>
+        <div class="arrow"></div>
+        <div class="node n-dec">이미 알린 딜인가?<small>가격이 내려갔으면 다시 알림</small></div>
+        <div class="arrow"></div>
+        <div class="node n-ok">딜마다 카드 1개, 걸린 사람 모두 태그<small>"한 번만"이면 자동 해제</small></div>
+      </div>
+    </section>
+
+    <section class="col">
+      <h2>💬 @멘션 봇</h2>
+      <p class="sub"><code>serve</code> · 상주 · <code>com.inticoy.buy-or-not.serve</code></p>
+      <div class="flow">
+        <div class="node">"@살래말래 메가커피 뜨면 알려줘"<small>멘션된 메시지만 읽음</small></div>
+        <div class="arrow"></div>
+        <div class="node n-ai">메시지 → 도구 선택<small>보낸 사람, 친구 목록, 기존 알림을 함께 전달</small></div>
+        <div class="arrow"></div>
+        <div class="branches">
+          <div class="br"><div class="lbl">알림 등록·해제·목록</div>
+            <div class="node">SQLite 갱신<small>"진호한테" → people.json으로 ID</small></div>
+            <div class="arrow"></div>
+            <div class="node n-ok">"🔔 알림 설정 완료!" 답장</div></div>
+          <div class="br"><div class="lbl">핫딜 보기</div>
+            <div class="node n-blue">알구몬 카테고리 / hotdeal.zip 인기</div>
+            <div class="arrow"></div>
+            <div class="node n-ok">TOP 카드 답장</div></div>
+        </div>
+        <div class="arrow"></div>
+        <div class="node n-fail">Gemini 한도 초과 시<small>"오늘 AI 한도를 다 썼어요"</small></div>
       </div>
     </section>
   </div>
 
-  <h3>비교</h3>
+  <h3>사이트 접근 방식 변천</h3>
   <div class="tw">
     <table>
-      <thead><tr><th></th><th>v1 · requests</th><th>v2 · Chrome + AppleScript</th></tr></thead>
+      <thead><tr><th></th><th>방식</th><th>결과</th></tr></thead>
       <tbody>
-        <tr><th>알구몬 접근</th><td class="bad">403 챌린지</td><td class="good">챌린지 없이 통과</td></tr>
-        <tr><th>실패 대응</th><td class="bad">없음 (exit 0)</td><td class="good">1시간 뒤 재시도 → exit 1 + Healthchecks(선택)</td></tr>
-        <tr><th>실행 위치</th><td>어디서나</td><td>로그인된 Mac (가정용 IP)</td></tr>
-        <tr><th>추가 의존성</th><td>없음</td><td>없음 (osascript, Chrome)</td></tr>
+        <tr><th>v1</th><td>requests (curl과 같음, JS 없음)</td><td class="bad">GitHub Actions 2026-07-22~, 로컬 2026-10-09 오후에 403 챌린지. 실패해도 exit 0</td></tr>
+        <tr><th>시도</th><td>Playwright + Chrome</td><td class="bad">체크박스가 뜨고 클릭해도 "확인 실패" (CDP 자동화 감지)</td></tr>
+        <tr><th>v2~</th><td>평소 Chrome 프로필 + AppleScript (CDP 없음)</td><td class="good">알구몬·hotdeal.zip 모두 챌린지 없이 통과</td></tr>
       </tbody>
     </table>
   </div>
 
-  <h3>시도했지만 안 된 것</h3>
+  <h3>쓰는 것</h3>
   <div class="tw">
     <table>
       <tbody>
-        <tr><th>쿠키 재사용</th><td><code>_ag_challenge</code>는 TTL 1시간이고 브라우저에 묶여 requests로 재사용 불가</td></tr>
-        <tr><th>Playwright</th><td>새 프로필에서 체크박스가 뜨고, 클릭해도 "확인 실패" (CDP 자동화 감지)</td></tr>
+        <tr><th>사이트</th><td>hotdeal.zip (TOP 10·관심사), 알구몬 (요청 시 카테고리 랭킹)</td></tr>
+        <tr><th>AI</th><td>Gemini 무료 등급 <code>gemini-3.5-flash-lite</code> — 하루 약 24회(매칭) + 대화 수</td></tr>
+        <tr><th>저장</th><td><code>data/sallae.db</code>(관심사·딜·알림 기록), <code>data/people.json</code>(친구 이름·ID) — 커밋 안 함</td></tr>
+        <tr><th>조사 중</th><td><code>snapshot</code> 하루 4번 hotdeal.zip 저장 (인기 정렬 기준·범위 확인 후 제거)</td></tr>
       </tbody>
     </table>
   </div>

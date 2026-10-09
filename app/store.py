@@ -113,6 +113,15 @@ class Store:
         self.db.commit()
         return new
 
+    def recent_deals(self, days: int = 3) -> list:
+        """최근 며칠 동안 본 딜, 최신순. 각 딜에 first_seen이 붙는다."""
+        since = (datetime.now(KST) - timedelta(days=days)).isoformat()
+        rows = self.db.execute(
+            "SELECT data, group_key, first_seen FROM deals WHERE first_seen >= ? AND source != 'seed'"
+            " ORDER BY first_seen DESC, rowid DESC", (since,))
+        return [json.loads(r["data"]) | {"group_key": r["group_key"], "first_seen": r["first_seen"]}
+                for r in rows]
+
     # ── 알림 기록 ───────────────────────────────────────
     def notify_kind(self, watch_id: int, group_key: str, price: int | None) -> str | None:
         """'new'(처음 보는 딜), 'drop'(전에 알린 가격보다 내려감), None(알리지 않음)."""

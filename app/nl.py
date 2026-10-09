@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
 _JUDGE_PROMPT = """친구들이 등록한 관심사(watches)와 새로 올라온 핫딜(deals)이 있어.
-각 관심사에 맞는 딜을 골라. 관심사 설명과 같은 종류의 상품이거나 그 상품과 직접 관련된 딜이면 넣어.
+각 관심사에 맞는 딜을 골라. 상품 종류가 관심사와 같아야 해. 예: '게이밍 모니터'에 게이밍 헤드셋·마우스는 넣지 마.
+관심사에 '관련'이라는 말이 있을 때만 주변기기·액세서리까지 넣어. 예: '스위치 관련 할인'에는 프로콘, 스위치용 SD카드도 넣어.
 max_price가 있으면 그 가격(원) 이하만 넣어. 가격을 알 수 없으면 넣어도 돼.
 '괜찮은' 같은 말은 사양이 그 용도에 맞고 댓글이 어느 정도 있는 딜로 판단해.
 reason은 왜 맞는지 한국어 한 문장으로 써.
@@ -81,6 +82,8 @@ _COMMAND_SYSTEM = """너는 친구들 디스코드 방의 핫딜 봇 '살래말�
   '게이밍 모니터', '괜찮은 노트북'처럼 상품 종류나 조건으로만 말하면 keywords를 비워.
 - 가격은 원 단위 정수로 바꿔.
 - 알림을 끄거나 지워달라고 하면 아래 목록에서 맞는 watch_id를 골라 remove_watch를 불러.
+- "메가커피 올라왔어?", "에어팟 핫딜 있었어?"처럼 특정 상품이 떴는지 물으면 search_deals(query=상품). 알림을 걸어달라는 말이 없으면 add_watch를 부르지 마.
+- show_deals는 "오늘 핫딜/랭킹/TOP 보여줘"처럼 목록 자체를 원할 때만 불러.
 - "지금 뭐 알림 받게 되어있어?", "내 알림"은 list_watch. "다들/전체/모두 뭐 걸어놨어?"처럼 모든 사람 것을 물으면 list_watch(everyone=true).
 
 등록된 친구: {people}
@@ -111,7 +114,11 @@ def _command_tools():
         _fn("list_watch", "걸어둔 알림 목록을 보여준다.",
             {"for_user": {"type": "string", "description": "다른 사람 목록을 볼 때만"},
              "everyone": {"type": "boolean", "description": "모든 사람의 알림을 볼 때 true"}}),
-        _fn("show_deals", "지금 핫딜 TOP 목록을 보여준다.",
+        _fn("search_deals", "최근 3일 동안 올라온 핫딜 중에서 특정 상품을 찾아 보여준다.",
+            {"query": {"type": "string", "description": "찾을 상품 (예: 메가커피, 게이밍 모니터)"},
+             "max_price": {"type": "integer", "description": "이 가격(원) 이하만. 언급 없으면 생략"}},
+            ["query"]),
+        _fn("show_deals", "지금 핫딜 TOP 목록(랭킹)을 보여준다.",
             {"category": {"type": "string", "enum": ["인기", "게임", "IT", "식품"],
                           "description": "카테고리 언급이 없으면 인기"}},
             ["category"]),

@@ -8,6 +8,7 @@ import discord
 
 from . import hotdealzip, nl, people
 from .collector import fetch_rank
+from .matcher import keyword_match
 from .notifier import CATEGORY_COLOR, _build_message, _mentions, send_message
 from .store import Store
 
@@ -20,7 +21,9 @@ HELP = ("이렇게 말해주세요 🙂\n"
         "• `괜찮은 게이밍 모니터 나오면 @친구 한테 알려줘`\n"
         "• `지금 뭐 알림 받게 되어있어?` / `다들 뭐 걸어놨어?`\n"
         "• `메가커피 알림 꺼줘`\n"
+        "• `메가커피 올라왔어?` (최근 3일 딜 검색)\n"
         "• `오늘 게임 핫딜 뭐 있어?`")
+SEARCH_LIMIT = 5
 
 
 def _text(content: str, mention_ids: list | None = None) -> dict:
@@ -29,6 +32,14 @@ def _text(content: str, mention_ids: list | None = None) -> dict:
 
 def _won(price: int) -> str:
     return f"{price // 10000}만원" if price % 10000 == 0 else f"{price:,}원"
+
+
+def _ago(iso: str) -> str:
+    from datetime import datetime
+    minutes = int((datetime.now().astimezone() - datetime.fromisoformat(iso)).total_seconds() // 60)
+    if minutes < 60:
+        return f"{max(minutes, 1)}분 전"
+    return f"{minutes // 60}시간 전" if minutes < 24 * 60 else f"{minutes // 1440}일 전"
 
 
 def _who(discord_id: str) -> str:
@@ -91,6 +102,30 @@ class Handler:
         if not mine:
             return _text(f"{_who(who)}님은 아직 걸어둔 알림이 없어요.")
         return _text(f"🔔 {_who(who)}님이 받는 알림이에요\n" + "\n".join(_describe(w) for w in mine))
+
+    def search_deals(self, sender: str, args: dict) -> dict:
+        query, max_price = args["query"], args.get("max_price")
+        recent = self.store.recent_deals(days=3)
+        if max_price:
+            recent = [d for d in recent if d.get("price") is None or d["price"] <= max_price]
+        found = [d for d in recent if keyword_match([query], d["title"])]
+        reasons = {}
+        if not found and recent:
+            # 제목에 그 단어가 없으면 '게이밍 모니터' 같은 종류로 보고 Gemini에 판단을 맡긴다
+            picks = nl.judge([{"id": 0, "want": query, "max_price": max_price}], recent[:150])
+            by_id = {d["id"]: d for d in recent}
+            found = [by_id[str(m["deal_id"])] for m in picks if str(m["deal_id"]) in by_id]
+            reasons = {str(m["deal_id"]): m["reason"] for m in picks}
+
+        unique = list({d["group_key"]: d for d in reversed(found)}.values())[::-1][:SEARCH_LIMIT]
+        if not unique:
+            return _text(f"최근 3일 동안 '{query}' 핫딜은 안 보였어요. "
+                         f"`{query} 뜨면 알려줘`라고 하면 올라올 때 알려드릴게요!")
+        for d in unique:
+            d["seen_ago"] = _ago(d["first_seen"])
+        title = f"🔎 '{query}' 최근 핫딜 {len(unique)}개"
+        subtitle = "최근 3일 동안 올라온 딜이에요" + (" (AI가 고름)" if reasons else "")
+        return _build_message(unique, CATEGORY_COLOR["hot"], header=title, subtitle=subtitle, ranked=False)
 
     def show_deals(self, sender: str, args: dict) -> dict:
         category = args.get("category", "인기")

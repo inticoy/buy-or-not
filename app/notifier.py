@@ -29,8 +29,8 @@ def _thread_name(date, category_name: str, emoji: str) -> str:
     return f"{emoji} {date.month}/{date.day}({day}) {category_name} 핫딜"
 
 
-def _deal_line(i, deal):
-    rank = RANK_EMOJI.get(i, f"**{i}위**")
+def _deal_line(i, deal, ranked: bool = True):
+    rank = RANK_EMOJI.get(i, f"**{i}위**") if ranked else "•"
     price = deal.get("price_str") or "가격 미확인"
     title = deal.get("title", "")
     url = deal.get("url", "")
@@ -40,13 +40,15 @@ def _deal_line(i, deal):
     if deal.get("community"): meta.append(deal["community"])
     if deal.get("recommend") is not None: meta.append(f"👍{deal['recommend']}")
     if deal.get("comments")  is not None: meta.append(f"💬{deal['comments']}")
+    if deal.get("seen_ago"):              meta.append(deal["seen_ago"])
     return line, " · ".join(meta)
 
 
-def _build_message(deals, color, header: str | None = None):
+def _build_message(deals, color, header: str | None = None,
+                   subtitle: str = "👉 오늘 TOP 10", ranked: bool = True):
     items = []
     for i, deal in enumerate(deals, 1):
-        line, meta = _deal_line(i, deal)
+        line, meta = _deal_line(i, deal, ranked)
         items.append({
             "type": 9,  # Section
             "components": [{"type": 10, "content": line + (f"\n{meta}" if meta else "")}],
@@ -57,7 +59,7 @@ def _build_message(deals, color, header: str | None = None):
     if header:
         components.append({"type": 10, "content": f"## {header}"})
     components += [
-        {"type": 10, "content": "👉 오늘 TOP 10"},
+        {"type": 10, "content": subtitle},
         {"type": 17, "accent_color": color, "components": items},
     ]
 

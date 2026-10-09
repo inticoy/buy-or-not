@@ -27,7 +27,8 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);
-  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif}
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  word-break:keep-all;overflow-wrap:anywhere}
 main{max-width:1180px;margin:0 auto;padding:32px 16px 56px}
 h1{margin:0 0 6px;font-size:26px}
 .sum{margin:0 0 20px;color:var(--muted)}
@@ -62,6 +63,10 @@ thead th{background:var(--neutral-bg)}
 tbody th{font-weight:600;white-space:nowrap}
 .bad{color:var(--fail-tx)} .good{color:var(--ok-tx)}
 code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9em}
+.node code{background:none;padding:0;font-size:inherit}
+.lane-label{width:100%;margin:14px 0 6px;font-size:12px;font-weight:600;color:var(--muted)}
+.lane-label:first-child{margin-top:0}
+.stack{width:100%;display:flex;flex-direction:column;gap:6px}
 </style>
 </head>
 <body>
@@ -73,8 +78,8 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
     <span><i style="background:var(--neutral-bg);border-color:var(--neutral-bd)"></i>일반</span>
     <span><i style="background:var(--blue-bg);border-color:var(--blue-bd)"></i>Chrome</span>
     <span><i style="background:var(--ai-bg);border-color:var(--ai-bd)"></i>Gemini</span>
-    <span><i style="background:var(--ok-bg);border-color:var(--ok-bd)"></i>Discord 전송 (스레드는 조용히)</span>
-    <span><i style="background:var(--warn-bg);border-color:var(--warn-bd)"></i>DM 푸시 / 수동 조치</span>
+    <span><i style="background:var(--ok-bg);border-color:var(--ok-bd)"></i>스레드 게시 (조용히)</span>
+    <span><i style="background:var(--warn-bg);border-color:var(--warn-bd)"></i>DM 푸시</span>
     <span><i style="background:var(--fail-bg);border-color:var(--fail-bd)"></i>실패</span>
   </div>
 
@@ -95,7 +100,7 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
           <div class="br"><div class="lbl">예</div>
             <div class="node n-fail">탭 열어둔 채 실패</div>
             <div class="arrow"></div>
-            <div class="node n-warn">선택: 폰에서 직접 체크</div>
+            <div class="node n-dec">선택: 폰에서 직접 체크</div>
             <div class="arrow"></div>
             <div class="node">1시간 뒤 재시도, 또 실패면 exit 1</div></div>
         </div>
@@ -133,28 +138,26 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
       <div class="flow">
         <div class="node">"@살래말래 메가커피 뜨면 알려줘"<small>멘션된 메시지만 읽음</small></div>
         <div class="arrow"></div>
-        <div class="node n-ai">메시지 → 도구 선택<small>보낸 사람, 친구 목록, 기존 알림을 함께 전달</small></div>
+        <div class="node n-ai">말 → 도구 선택<small>보낸 사람·친구 목록·기존 알림을 함께 전달</small></div>
+
+        <div class="lane-label">알림 등록·해제</div>
+        <div class="node">SQLite 갱신<small>"진호한테" → people.json으로 Discord ID</small></div>
         <div class="arrow"></div>
-        <div class="branches">
-          <div class="br"><div class="lbl">알림 등록·해제</div>
-            <div class="node">SQLite 갱신<small>"진호한테" → people.json으로 ID</small></div>
-            <div class="arrow"></div>
-            <div class="node n-ok">"🔔 알림 설정 완료!" 답장</div>
-            <div class="arrow"></div>
-            <div class="node">고정 메시지 "🔔 알림 키워드" 수정</div>
-            <div class="arrow"></div>
-            <div class="node n-warn">대신 걸어줬으면 대상자에게 DM</div></div>
-          <div class="br"><div class="lbl">목록·검색·랭킹</div>
-            <div class="node">내 알림 / 전체 알림<small>이름으로 표시, 태그 없음</small></div>
-            <div class="arrow"></div>
-            <div class="node">"메가커피 올라왔어?"<small>최근 3일 딜 기록 검색, 없으면 Gemini 판단</small></div>
-            <div class="arrow"></div>
-            <div class="node n-blue">"오늘 게임 핫딜?"<small>알구몬 카테고리 / hotdeal.zip 인기</small></div>
-            <div class="arrow"></div>
-            <div class="node n-ok">카드 답장</div></div>
+        <div class="node n-ok">"🔔 알림 설정 완료!" 답장 + 고정 메시지 수정</div>
+        <div class="arrow"></div>
+        <div class="node n-warn">대신 걸어줬으면 대상자에게 DM</div>
+
+        <div class="lane-label">목록·검색·랭킹</div>
+        <div class="stack">
+          <div class="node">"지금 뭐 알림 받아?" · "다들 뭐 걸어놨어?"<small>이름으로 표시, 태그 없음</small></div>
+          <div class="node">"메가커피 올라왔어?"<small>최근 3일 딜 기록 검색, 제목에 없으면 Gemini 판단</small></div>
+          <div class="node n-blue">"오늘 게임 핫딜 뭐 있어?"<small>알구몬 카테고리 / hotdeal.zip 인기</small></div>
         </div>
         <div class="arrow"></div>
-        <div class="node n-fail">Gemini 한도 초과 시<small>"오늘 AI 한도를 다 썼어요"</small></div>
+        <div class="node n-ok">답장 (목록 / 카드)</div>
+
+        <div class="lane-label">실패</div>
+        <div class="node n-fail">Gemini 한도 초과<small>"오늘 AI 한도를 다 썼어요"</small></div>
       </div>
     </section>
   </div>

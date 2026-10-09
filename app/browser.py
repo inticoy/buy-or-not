@@ -11,6 +11,7 @@ import os
 import subprocess
 import time
 import uuid
+from urllib.parse import urlsplit
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,8 @@ on run argv
 end run
 '''
 
-_STATUS_JS = "location.pathname + '\\n' + document.readyState + '\\n' + document.title"
+_STATUS_JS = ("location.host + '\\n' + location.pathname + '\\n' + document.readyState"
+              " + '\\n' + document.title")
 
 # 알구몬은 /n/challenge로 보내고, Cloudflare는 주소 그대로 제목만 바꾼다
 _CHALLENGE_TITLES = ("Just a moment", "잠시만 기다리")
@@ -132,14 +134,16 @@ class ChromeTab:
         return self
 
     def _wait_loaded(self, deadline: float):
+        host = urlsplit(self.url).netloc
         path = title = ""
         while time.monotonic() < deadline:
             time.sleep(1)
             try:
-                path, state, title = self.js(_STATUS_JS).split("\n", 2)
+                current_host, path, state, title = self.js(_STATUS_JS).split("\n", 3)
             except (BrowserFetchError, ValueError):
                 continue  # 페이지 전환 중
-            if state == "complete" and not _is_challenge(path, title):
+            # 새 탭은 잠깐 about:blank로 'complete' 상태라, 목표 사이트에 도착했는지도 본다
+            if current_host == host and state == "complete" and not _is_challenge(path, title):
                 return
         if _is_challenge(path, title):
             self._keep_open = True

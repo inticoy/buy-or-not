@@ -9,7 +9,7 @@ from urllib.parse import quote
 
 from bs4 import BeautifulSoup
 
-from .browser import BrowserFetchError, ChromeTab, fetch_html
+from .browser import BrowserFetchError, ChromeTab
 from .collector import _deduplicate_deals
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,10 @@ _ITEMS_JS = "document.querySelectorAll('a.deal-item').length"
 
 def fetch_popular() -> list:
     """오늘 인기 딜 (첫 화면 약 25개)."""
-    return parse_deals(fetch_html(POPULAR_URL))
+    with ChromeTab(POPULAR_URL) as tab:
+        if not tab.wait_until(f"{_ITEMS_JS} > 0"):
+            logger.warning("hotdeal.zip popular: no deal items on page")
+        return parse_deals(tab.html())
 
 
 def top10() -> list:

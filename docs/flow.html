@@ -72,117 +72,85 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
 <body>
 <main>
   <h1>살래말래 동작 흐름</h1>
-  <p class="sum">맥의 launchd가 세 가지를 돌립니다. 사이트는 평소 쓰는 Chrome을 AppleScript로 열어 읽고(챌린지 회피), 말과 판단은 Gemini가 맡습니다. 스레드 글은 모두 조용히(@silent) 가고, 알림 받을 사람에게만 DM이 갑니다. (v3, 2026-10-09)</p>
+  <p class="sum">cron-job.org가 15분마다 GitHub Actions의 <code>daily.yml</code>을 실행합니다. 한 번 돌 때마다 딜을 모으고, 관심사 알림을 보내고, 새 <code>@멘션</code>에 답하고, 정해진 시각이면 TOP 5 글을 올립니다. 맥은 필요 없습니다. (v4, 2026-10-11)</p>
 
   <div class="legend">
-    <span><i style="background:var(--neutral-bg);border-color:var(--neutral-bd)"></i>일반</span>
-    <span><i style="background:var(--blue-bg);border-color:var(--blue-bd)"></i>Chrome</span>
+    <span><i style="background:var(--blue-bg);border-color:var(--blue-bd)"></i>외부 요청</span>
     <span><i style="background:var(--ai-bg);border-color:var(--ai-bd)"></i>Gemini</span>
-    <span><i style="background:var(--ok-bg);border-color:var(--ok-bd)"></i>스레드 게시 (조용히)</span>
-    <span><i style="background:var(--warn-bg);border-color:var(--warn-bd)"></i>DM 푸시</span>
-    <span><i style="background:var(--fail-bg);border-color:var(--fail-bd)"></i>실패</span>
+    <span><i style="background:var(--ok-bg);border-color:var(--ok-bd)"></i>디스코드에 올림</span>
+    <span><i style="border-style:dashed"></i>판단</span>
   </div>
 
   <div class="cols">
     <section class="col">
-      <h2>🔥 매일 TOP 10</h2>
-      <p class="sub"><code>run-once</code> · 매일 12:00 · <code>com.inticoy.buy-or-not</code></p>
+      <h2>📥 딜 모으기 · 알림</h2>
+      <p class="sub">매 실행 · <code>sources.py</code> · <code>matcher.py</code></p>
       <div class="flow">
-        <div class="node n-blue">hotdeal.zip <code>/인기</code> 열기</div>
+        <div class="node n-blue">최근 24시간 딜 읽기<small>왓딜 API(펨코·뽐뿌·아카·퀘이사존…) · 루리웹 · 클리앙</small></div>
         <div class="arrow"></div>
-        <div class="node n-dec">챌린지 페이지인가?</div>
+        <div class="node">SQLite에 기록<small>같은 딜은 묶고, 본 딜은 댓글 수만 새로</small></div>
+        <div class="arrow"></div>
+        <div class="node n-dec">처음 보는 딜이 관심사에 맞나?</div>
         <div class="arrow"></div>
         <div class="branches">
-          <div class="br"><div class="lbl">아니오 (평소)</div>
-            <div class="node">파싱 → 크로스포스트 제거 → 상위 10개</div>
-            <div class="arrow"></div>
-            <div class="node n-ok">핫딜 thread에 카드 게시<small>조용히, 태그 없음</small></div></div>
-          <div class="br"><div class="lbl">예</div>
-            <div class="node n-fail">탭 열어둔 채 실패</div>
-            <div class="arrow"></div>
-            <div class="node n-dec">선택: 폰에서 직접 체크</div>
-            <div class="arrow"></div>
-            <div class="node">1시간 뒤 재시도, 또 실패면 exit 1</div></div>
+          <div class="br"><div class="lbl">키워드</div><div class="node">제목에 단어가 다 있음</div></div>
+          <div class="br"><div class="lbl">설명형</div><div class="node n-ai">Gemini가 판단<small>"괜찮은 게이밍 모니터"</small></div></div>
         </div>
+        <div class="arrow"></div>
+        <div class="node n-ok">스레드에 조용히 + 대상자 DM<small>사진·가격·이유, 보러 가기·원문 버튼</small></div>
       </div>
     </section>
 
     <section class="col">
-      <h2>🔔 관심사 알림</h2>
-      <p class="sub"><code>watch</code> · 매시 30분 · <code>com.inticoy.buy-or-not.watch</code></p>
+      <h2>💬 @멘션</h2>
+      <p class="sub">매 실행 · <code>mentions.py</code> · <code>nl.py</code></p>
       <div class="flow">
-        <div class="node n-blue">hotdeal.zip 최신 열기 → '더보기' 2번<small>75개, 약 1~3시간 분량</small></div>
+        <div class="node n-blue">핫딜 thread의 새 메시지 읽기<small>지난번 마지막 메시지 이후</small></div>
         <div class="arrow"></div>
-        <div class="node">처음 보는 딜만 SQLite에 기록<small>크로스포스트는 같은 그룹으로 묶음</small></div>
+        <div class="node n-dec">봇을 불렀나?</div>
         <div class="arrow"></div>
-        <div class="branches">
-          <div class="br"><div class="lbl">키워드 관심사</div>
-            <div class="node">제목에 단어가 모두 있나 + 가격 상한</div></div>
-          <div class="br"><div class="lbl">설명형 관심사</div>
-            <div class="node n-ai">새 딜 전체를 한 번에 물어 판단<small>고른 이유 포함</small></div></div>
-        </div>
+        <div class="node n-ai">Gemini가 말 → 도구 호출<small>알림 걸기 · 끄기 · 목록 · 검색</small></div>
         <div class="arrow"></div>
-        <div class="node n-dec">이미 알린 딜인가?<small>같은 딜 묶음 기준. 가격이 내려갔으면 다시 알림</small></div>
+        <div class="node">실행 + 🔔 알림 키워드 고정 메시지 수정</div>
         <div class="arrow"></div>
-        <div class="node n-ok">thread에 카드 1개, 걸린 사람 모두 태그<small>조용히</small></div>
-        <div class="arrow"></div>
-        <div class="node n-warn">걸린 사람마다 DM 🔔<small>카드 링크 포함</small></div>
-        <div class="arrow"></div>
-        <div class="node">"한 번만"이면 자동 해제 → 알림 키워드 수정</div>
+        <div class="node n-ok">답장 (대신 걸어준 알림은 DM)<small>최대 15분 늦을 수 있음</small></div>
       </div>
     </section>
 
     <section class="col">
-      <h2>💬 @멘션 봇</h2>
-      <p class="sub"><code>serve</code> · 상주 · <code>com.inticoy.buy-or-not.serve</code></p>
+      <h2>🔥 TOP 5 글</h2>
+      <p class="sub">12시 · 21시 · <code>ranking.py</code></p>
       <div class="flow">
-        <div class="node">"@살래말래 메가커피 뜨면 알려줘"<small>멘션된 메시지만 읽음</small></div>
+        <div class="node n-dec">올릴 시각인가?<small>12시: 인기·게임·IT·식품 / 21시: 인기 (3시간 안, 한 번만)</small></div>
         <div class="arrow"></div>
-        <div class="node n-ai">말 → 도구 선택<small>보낸 사람·친구 목록·기존 알림을 함께 전달</small></div>
-
-        <div class="lane-label">알림 등록·해제</div>
-        <div class="node">SQLite 갱신<small>"진호한테" → people.json으로 Discord ID</small></div>
+        <div class="node">점수 매기기<small>커뮤니티 안 댓글 백분위 + 댓글 수 + 여러 곳 보너스</small></div>
         <div class="arrow"></div>
-        <div class="node n-ok">"🔔 알림 설정 완료!" 답장 + 고정 메시지 수정</div>
+        <div class="node">빼고 묶기<small>종료·기간 지남·2일 안에 올린 딜 빼기, 같은 행사 한 줄</small></div>
         <div class="arrow"></div>
-        <div class="node n-warn">대신 걸어줬으면 대상자에게 DM</div>
-
-        <div class="lane-label">목록·검색·랭킹</div>
-        <div class="stack">
-          <div class="node">"지금 뭐 알림 받아?" · "다들 뭐 걸어놨어?"<small>이름으로 표시, 태그 없음</small></div>
-          <div class="node">"메가커피 올라왔어?"<small>최근 3일 딜 기록 검색, 제목에 없으면 Gemini 판단</small></div>
-          <div class="node n-blue">"오늘 게임 핫딜 뭐 있어?"<small>알구몬 카테고리 / hotdeal.zip 인기</small></div>
-        </div>
-        <div class="arrow"></div>
-        <div class="node n-ok">답장 (목록 / 카드)</div>
-
-        <div class="lane-label">실패</div>
-        <div class="node n-fail">Gemini 한도 초과<small>"오늘 AI 한도를 다 썼어요"</small></div>
+        <div class="node n-ok">게시판마다 카드 하나<small>썸네일 · 제목(원문 링크) · 가격 · 출처 · 더 보기 버튼</small></div>
       </div>
     </section>
-  </div>
-
-  <h3>사이트 접근 방식 변천</h3>
-  <div class="tw">
-    <table>
-      <thead><tr><th></th><th>방식</th><th>결과</th></tr></thead>
-      <tbody>
-        <tr><th>v1</th><td>requests (curl과 같음, JS 없음)</td><td class="bad">GitHub Actions 2026-07-22~, 로컬 2026-10-09 오후에 403 챌린지. 실패해도 exit 0</td></tr>
-        <tr><th>시도</th><td>Playwright + Chrome</td><td class="bad">체크박스가 뜨고 클릭해도 "확인 실패" (CDP 자동화 감지)</td></tr>
-        <tr><th>v2~</th><td>평소 Chrome 프로필 + AppleScript (CDP 없음)</td><td class="good">알구몬·hotdeal.zip 모두 챌린지 없이 통과</td></tr>
-      </tbody>
-    </table>
   </div>
 
   <h3>쓰는 것</h3>
   <div class="tw">
     <table>
       <tbody>
-        <tr><th>사이트</th><td>hotdeal.zip (TOP 10·관심사), 알구몬 (요청 시 카테고리 랭킹)</td></tr>
-        <tr><th>AI</th><td>Gemini 무료 등급 <code>gemini-3.5-flash-lite</code> — 하루 약 24회(매칭) + 대화 수</td></tr>
-        <tr><th>저장</th><td><code>data/sallae.db</code>(관심사·딜·알림 기록), <code>data/people.json</code>(친구 이름·ID), <code>data/board.json</code>(알림 키워드 메시지 ID) — 커밋 안 함</td></tr>
-        <tr><th>알림</th><td>스레드 글은 전부 <code>@silent</code>. 관심사 알림·대신 걸어준 알림 안내만 대상자에게 DM (서버 멤버 DM을 막으면 실패, 로그 경고)</td></tr>
-        <tr><th>조사 중</th><td><code>snapshot</code> 하루 4번 hotdeal.zip 저장 (인기 정렬 기준·범위 확인 후 제거)</td></tr>
+        <tr><th>실행</th><td>GitHub Actions <code>daily.yml</code> (cron-job.org가 15분마다 workflow_dispatch)</td></tr>
+        <tr><th>출처</th><td>왓딜 API · 루리웹 · 클리앙 (hotdeal.zip·알구몬·펨코 직접 읽기는 Actions IP에서 막힘)</td></tr>
+        <tr><th>저장</th><td><code>data/sallae.db</code>, <code>data/board.json</code> — Actions 캐시로 다음 실행에 넘김. 알림 목록은 비밀값 <code>SEED_JSON</code>으로 복원</td></tr>
+        <tr><th>AI</th><td>Gemini <code>gemini-3.5-flash-lite</code> — 멘션 해석, 설명형 알림 판단</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>변천</h3>
+  <div class="tw">
+    <table>
+      <tbody>
+        <tr><th>v1</th><td>requests로 알구몬 랭킹 → Actions(데이터센터 IP)에서 403</td></tr>
+        <tr><th>v2·v3</th><td>맥 Chrome + AppleScript로 알구몬·hotdeal.zip, 관심사 알림, 상주 <code>@멘션</code> 봇 → 맥이 꺼지면 끊김</td></tr>
+        <tr><th>v4</th><td class="good">Actions로 이전, 출처를 Actions에서 읽히는 곳으로, 순위를 직접 (2026-10-11~)</td></tr>
       </tbody>
     </table>
   </div>

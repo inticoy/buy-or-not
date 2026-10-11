@@ -48,3 +48,9 @@
 - **@멘션:** 상주 봇 대신 15분마다 새 멘션을 읽어 Gemini로 처리. "오늘 ○○ 핫딜" 순위 보기는 정해진 글로 대신해 뺌
 - **상태:** SQLite를 Actions 캐시로 넘김, 알림 목록은 `SEED_JSON`으로 복원 가능
 - 맥 launchd 작업(매일 글·알림·상주 봇·스냅숏)은 끄고 `~/Library/LaunchAgents/disabled-buy-or-not/`에 보관
+
+## 운영 모니터링 추가 (2026-10-11)
+
+- 현재 Actions 버전에 Healthchecks 실행 완료 핑 추가 (15분 / grace 10분). 이전 v2의 선택 기능과 별개입니다.
+- 수집원·Gemini 등 내부에서 잡힌 오류도 상태 보고. 공통 private `monitoring` Worker + 별도 D1에서 중복·복구·일일 요약 관리.
+- 개인 Agents 포럼의 살래말래 스레드 사용. [운영 안내](monitoring.md).

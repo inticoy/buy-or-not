@@ -48,3 +48,7 @@ cp .env.example .env              # 토큰·채널 ID 채우기 (BOT_ENV=dev)
 **GitHub 공유 미리보기:** 레포 Settings → General → Social preview에 `docs/images/social-preview.png`(1280×640)를 올립니다 (API로는 못 올림).
 
 **README 카드 그림:** `.venv/bin/pip install pillow && .venv/bin/python -m tools.readme_cards` — 지금 딜로 `docs/images/card-*.png`를 다시 만듭니다 (멘션은 가명).
+
+## 운영 모니터링
+
+Actions Secrets `MONITOR_ENDPOINT`, `MONITOR_TOKEN`, `HEALTHCHECK_URL`을 등록합니다. 수집원·Gemini·Discord 기능 장애는 monitoring Worker가 서비스 스레드로 전달합니다. 실행 누락은 15분 / grace 10분 Healthchecks가 별도로 감지합니다. [상세 안내](monitoring.md).

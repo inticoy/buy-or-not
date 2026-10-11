@@ -67,7 +67,7 @@ def _answer(handler: Handler, store: Store, channel: str, me: str, msg: dict, dr
         return
     except Exception as exc:
         monitoring.error("gemini.command", exc, "AI 멘션 해석 실패", "Gemini 키·응답 형식 확인")
-        logger.exception("parse failed: %s", words)
+        logger.exception("parse failed")  # Public Actions logs must not include user chat
         reply(text("말을 잘 못 알아들었어요. 다시 한 번 말해주세요!"))
         return
 

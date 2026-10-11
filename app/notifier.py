@@ -61,14 +61,13 @@ def _link_button(label: str, url: str) -> dict:
 
 def build_board(header: str, subtitle: str, groups: list, color: int, more: tuple[str, str] | None,
                 ranked: bool = True) -> dict:
-    """딜마다 썸네일 + '보러 가기' 버튼(쇼핑몰, 없으면 원문). 맨 아래 더 보기 링크."""
+    """딜마다 제목(원문 링크)·가격·출처 + 썸네일. 맨 아래 더 보기 링크 버튼."""
     items = []
     for i, g in enumerate(groups, 1):
         if items:
             items.append({"type": 14, "divider": True, "spacing": 1})
         items.append({"type": 9, "components": [{"type": 10, "content": _deal_text(i if ranked else None, g)}],
                       "accessory": {"type": 11, "media": {"url": _media(g.get("image_url"))}}})
-        items.append({"type": 1, "components": [_link_button("보러 가기", g.get("product_url") or g["head"]["url"])]})
     if more:
         items += [{"type": 14, "divider": False, "spacing": 1}, {"type": 1, "components": [_link_button(*more)]}]
     return {"flags": 32768, "components": [  # IS_COMPONENTS_V2 (@silent는 보낼 때 붙는다)

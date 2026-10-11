@@ -19,6 +19,7 @@ from app.notifier import BOARD_COLOR, board_header, build_alert, build_board
 from app.store import KST, Store
 
 OUT = Path("docs/images")
+AVATAR = OUT / "avatar.png"  # 캐릭터 (디스코드 봇 프로필과 같음)
 CACHE = Path(tempfile.gettempdir()) / "sallae-readme"
 FONT = "/System/Library/Fonts/AppleSDGothicNeo.ttc"  # 4 SemiBold, 6 Bold
 TWEMOJI = "https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/72x72"
@@ -147,8 +148,10 @@ def render(payload: dict, channel: str, mentions: list[str] = (), time: str = "�
     d.text((16 * S, bar / 2), "#", font=_f(22), fill=MUTED, anchor="lm")
     _draw_line(img, 40 * S, bar / 2 - 12 * S, f"**{channel}**", (W - 60) * S)
     d.line((0, bar, W * S, bar), fill=(31, 32, 35), width=S)
-    d.ellipse((16 * S, top, 56 * S, top + 40 * S), fill=(237, 66, 69))
-    d.text((36 * S, top + 20 * S), "살", font=_f(18, True), fill=(255, 255, 255), anchor="mm")
+    avatar = Image.open(AVATAR).convert("RGB").resize((40 * S, 40 * S), Image.LANCZOS)  # 봇 프로필 사진
+    ring = Image.new("L", (160 * S, 160 * S), 0)
+    ImageDraw.Draw(ring).ellipse((0, 0, ring.width - 1, ring.height - 1), fill=255)
+    img.paste(avatar, (16 * S, top), ring.resize(avatar.size, Image.LANCZOS))
     d.text((LEFT * S, top + 10 * S), "살래말래", font=_f(16, True), fill=NAME, anchor="lm")
     x = LEFT * S + d.textlength("살래말래", font=_f(16, True)) + 6 * S
     d.rounded_rectangle((x, top + 3 * S, x + 26 * S, top + 17 * S), radius=3 * S, fill=BLURPLE)

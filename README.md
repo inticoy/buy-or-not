@@ -1,4 +1,6 @@
-# 살래말래
+<p align="center"><img src="docs/images/logo.png" width="160" alt="살래말래 캐릭터"></p>
+
+<h1 align="center">살래말래</h1>
 
 친구들 디스코드 핫딜 스레드에 **오늘의 인기 핫딜**을 골라 올리고, 친구들이 걸어둔 관심사에 맞는 딜이 뜨면 그 사람에게 알려 주는 봇입니다.
 

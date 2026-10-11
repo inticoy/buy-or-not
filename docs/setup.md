@@ -45,4 +45,6 @@ cp .env.example .env              # 토큰·채널 ID 채우기 (BOT_ENV=dev)
 
 **관심사를 명령어로:** `watch-add --owner <ID> --want "메가커피" --keywords 메가커피`, `watch-list`, `board`(고정 메시지 갱신).
 
+**GitHub 공유 미리보기:** 레포 Settings → General → Social preview에 `docs/images/social-preview.png`(1280×640)를 올립니다 (API로는 못 올림).
+
 **README 카드 그림:** `.venv/bin/pip install pillow && .venv/bin/python -m tools.readme_cards` — 지금 딜로 `docs/images/card-*.png`를 다시 만듭니다 (멘션은 가명).

@@ -1,6 +1,6 @@
 # 살래말래: 딜 모으기·관심사 알림·@멘션 답하기, 12시(인기+게임·IT·식품)·21시(인기) 글.
-# cron-job.org가 15분마다 workflow_dispatch로 실행한다 (GitHub 자체 schedule은 늦거나 빠진다).
-name: sallae
+# cron-job.org가 15분마다 workflow_dispatch로 실행한다 (파일 이름 daily.yml은 예전 cron-job.org 설정을 그대로 쓰려고). GitHub 자체 schedule은 늦거나 빠진다.
+name: daily
 
 on:
   workflow_dispatch:

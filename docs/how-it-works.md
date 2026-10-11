@@ -1,6 +1,6 @@
 # 동작 방식
 
-v4(현재) 기준입니다. 흐름도는 [flow.html](flow.html)에 있어요.
+v4(현재) 기준입니다. 흐름도는 [flow.html](flow.html), 설정은 [setup.md](setup.md)에 있어요.
 
 ## 흐름
 
@@ -66,7 +66,7 @@ GitHub Actions는 미국 데이터센터 IP라 여러 사이트가 막습니다 
 
 ## 운영
 
-- 실행 기록: GitHub Actions의 `daily` 워크플로 (공개 레포라 로그도 공개. 비밀값은 가려짐)
+- 실행 기록: GitHub Actions의 `daily` 워크플로 (공개 레포라 로그도 공개. 친구 이름·ID·알림 내용은 로그에 남기지 않음)
 - 수동 실행: `gh workflow run daily.yml --ref main`
 - 캐시가 사라지면: 알림 목록은 `SEED_JSON`에서 복원, 딜·올린 글 기록은 새로 시작 (첫 실행은 기록만)
 - 알림 목록을 바꾼 뒤 캐시가 사라질 일에 대비하려면 `python -m app export-seed`로 `SEED_JSON`을 갱신

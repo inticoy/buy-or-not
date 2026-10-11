@@ -97,7 +97,7 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
           <div class="br"><div class="lbl">설명형</div><div class="node n-ai">Gemini가 판단<small>"괜찮은 게이밍 모니터"</small></div></div>
         </div>
         <div class="arrow"></div>
-        <div class="node n-ok">스레드에 조용히 + 대상자 DM<small>사진·가격·이유, 보러 가기·원문 버튼</small></div>
+        <div class="node n-ok">스레드에 조용히(대상자만 태그) + 대상자 DM<small>사진·가격·이유, 보러 가기·원문 버튼</small></div>
       </div>
     </section>
 
@@ -139,7 +139,8 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
         <tr><th>실행</th><td>GitHub Actions <code>daily.yml</code> (cron-job.org가 15분마다 workflow_dispatch)</td></tr>
         <tr><th>출처</th><td>왓딜 API · 루리웹 · 클리앙 (hotdeal.zip·알구몬·펨코 직접 읽기는 Actions IP에서 막힘)</td></tr>
         <tr><th>저장</th><td><code>data/sallae.db</code>, <code>data/board.json</code> — Actions 캐시로 다음 실행에 넘김. 알림 목록은 비밀값 <code>SEED_JSON</code>으로 복원</td></tr>
-        <tr><th>AI</th><td>Gemini <code>gemini-3.5-flash-lite</code> — 멘션 해석, 설명형 알림 판단</td></tr>
+        <tr><th>AI</th><td>Gemini <code>gemini-3.5-flash-lite</code> — 멘션 해석(도구 호출), 설명형 알림 판단</td></tr>
+        <tr><th>비밀값</th><td><code>ENV_FILE</code> · <code>PEOPLE_JSON</code> · <code>SEED_JSON</code> — 로그에는 친구 이름·ID를 남기지 않음 (<a href="setup.md">setup.md</a>)</td></tr>
       </tbody>
     </table>
   </div>

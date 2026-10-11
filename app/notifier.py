@@ -121,7 +121,7 @@ def send_dm(user_id: str, content: str) -> bool:
         return True
     except requests.RequestException as e:
         detail = e.response.text[:200] if getattr(e, "response", None) is not None else e
-        logger.warning("DM to %s failed: %s", user_id, detail)
+        logger.warning("DM failed: %s", detail)
         return False
 
 
@@ -197,4 +197,4 @@ def post_alert(hits: list, deal: dict, dry_run: bool = False) -> None:
         wants = " / ".join(dict.fromkeys(f"'{h['want']}'" for h in hits if h["owner_id"] == owner))
         send_dm(owner, f"🔔 {wants} 알림 · {where}에서 **{deal['title']}** 핫딜이 떴어요! ({price})\n"
                        f"→ {link}")
-    logger.info("alert sent: %s → %s", [h["want"] for h in hits], deal["title"])
+    logger.info("alert sent: %d watch(es) → %s", len(hits), deal["title"])

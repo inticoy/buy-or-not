@@ -72,7 +72,7 @@ def _answer(handler: Handler, store: Store, channel: str, me: str, msg: dict, dr
         reply(text(result["reply"] or HELP))
         return
     for name, args in result["calls"]:
-        logger.info("%s → %s(%s)", _name(msg["author"]), name, args)
+        logger.info("mention → %s", name)  # 공개 로그라 이름·알림 내용은 남기지 않는다
         action = getattr(handler, name, None)
         if action is None or dry_run:  # 시험 실행에서는 알림을 실제로 걸거나 끄지 않는다
             continue

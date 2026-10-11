@@ -1,0 +1,74 @@
+# 살래말래: 딜 모으기·관심사 알림·@멘션 답하기, 12시(인기+게임·IT·식품)·21시(인기) 글.
+# cron-job.org가 15분마다 workflow_dispatch로 실행한다 (GitHub 자체 schedule은 늦거나 빠진다).
+name: sallae
+
+on:
+  workflow_dispatch:
+
+# 겹쳐 돌면 같은 알림·글이 두 번 나간다. 대기 중이던 실행은 다음 실행으로 대체된다
+concurrency:
+  group: sallae
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write # 지난 상태 캐시 지우기
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # 상태(딜·알림·올린 글 기록)는 매번 새 키로 저장하고 가장 최근 것을 복원한다.
+      # 캐시가 사라지면 SEED_JSON으로 알림 목록을 되살리고, 첫 실행은 기록만 해 중복 글·알림이 없다
+      - name: Restore state
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            data/sallae.db
+            data/board.json
+          key: state-${{ github.run_id }}
+          restore-keys: state-
+
+      - name: Write config
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          PEOPLE_JSON: ${{ secrets.PEOPLE_JSON }}
+        run: |
+          printf '%s\n' "$ENV_FILE" > .env
+          mkdir -p data
+          printf '%s\n' "$PEOPLE_JSON" > data/people.json
+
+      - name: Cycle
+        env:
+          BOT_ENV: prod
+          PYTHONUNBUFFERED: "1"
+          SEED_JSON: ${{ secrets.SEED_JSON }}
+        run: python -m app cycle
+
+      - name: Save state
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            data/sallae.db
+            data/board.json
+          key: state-${{ github.run_id }}
+
+      # 캐시는 레포당 10GB: 최근 것만 남긴다
+      - name: Prune old caches
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh cache list --repo "$GITHUB_REPOSITORY" --key state- --sort created_at --order desc --limit 100 --json id --jq '.[3:][].id' |
+            xargs -r -n1 gh cache delete --repo "$GITHUB_REPOSITORY"

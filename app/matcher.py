@@ -4,13 +4,13 @@
 - 설명형 관심사(keywords 없음): Gemini가 판단
 """
 from . import nl
-from .collector import _normalised_title
+from .dedupe import normalised_title
 
 
 def keyword_match(keywords: list, title: str) -> bool:
-    normalised = _normalised_title(title)
+    normalised = normalised_title(title)
     return any(
-        all(token in normalised for token in _normalised_title(keyword).split())
+        all(token in normalised for token in normalised_title(keyword).split())
         for keyword in keywords
     )
 

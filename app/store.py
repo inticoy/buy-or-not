@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from .collector import _same_deal
+from .dedupe import same_deal
 
 DB_PATH = Path("data/sallae.db")
 KST = ZoneInfo("Asia/Seoul")
@@ -34,6 +34,16 @@ CREATE TABLE IF NOT EXISTS deals (
   first_seen  TEXT NOT NULL,
   PRIMARY KEY (source, deal_id)
 );
+CREATE TABLE IF NOT EXISTS posted (
+  board       TEXT NOT NULL,
+  group_key   TEXT NOT NULL,
+  posted_at   TEXT NOT NULL,
+  PRIMARY KEY (board, group_key)
+);
+CREATE TABLE IF NOT EXISTS meta (
+  key         TEXT PRIMARY KEY,
+  value       TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS notified (
   watch_id    INTEGER NOT NULL,
   group_key   TEXT NOT NULL,
@@ -51,7 +61,6 @@ def _now() -> str:
 class Store:
     def __init__(self, path: Path | str = DB_PATH):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        # watch(launchd)와 serve가 같은 DB를 쓰므로 잠금을 잠시 기다린다
         self.db = sqlite3.connect(path, timeout=10, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(_SCHEMA)
@@ -88,18 +97,24 @@ class Store:
         return self.db.execute("SELECT 1 FROM deals LIMIT 1").fetchone() is None
 
     def record_deals(self, source: str, deals: list) -> list:
-        """Save deals and return the ones not seen before, each with a group_key."""
+        """Save deals and return the ones not seen before, each with a group_key.
+
+        이미 본 딜은 댓글·추천 수와 종료 여부만 새로 고친다 (순위를 매길 때 최신 반응을 쓰려고).
+        """
         since = (datetime.now(KST) - GROUP_WINDOW).isoformat()
         recent = [json.loads(row["data"]) | {"group_key": row["group_key"]} for row in self.db.execute(
             "SELECT data, group_key FROM deals WHERE first_seen >= ?", (since,))]
-        known = {row["deal_id"] for row in self.db.execute(
-            "SELECT deal_id FROM deals WHERE source = ?", (source,))}
+        known = {row["deal_id"]: row["group_key"] for row in self.db.execute(
+            "SELECT deal_id, group_key FROM deals WHERE source = ?", (source,))}
 
         new = []
         for deal in deals:
             if deal["id"] in known:
+                self.db.execute("UPDATE deals SET data = ?, price = ? WHERE source = ? AND deal_id = ?",
+                                (json.dumps(deal | {"group_key": known[deal["id"]]}, ensure_ascii=False),
+                                 deal.get("price"), source, deal["id"]))
                 continue
-            same = next((seen for seen in recent if _same_deal(deal, seen)), None)
+            same = next((seen for seen in recent if same_deal(deal, seen)), None)
             deal = deal | {"group_key": same["group_key"] if same else f"{source}:{deal['id']}"}
             self.db.execute(
                 "INSERT INTO deals (source, deal_id, group_key, title, price, data, first_seen)"
@@ -108,14 +123,14 @@ class Store:
                  json.dumps(deal, ensure_ascii=False), _now()),
             )
             recent.append(deal)
-            known.add(deal["id"])
+            known[deal["id"]] = deal["group_key"]
             new.append(deal)
         self.db.commit()
         return new
 
-    def recent_deals(self, days: int = 3) -> list:
-        """최근 며칠 동안 본 딜, 최신순. 각 딜에 first_seen이 붙는다."""
-        since = (datetime.now(KST) - timedelta(days=days)).isoformat()
+    def recent_deals(self, days: float = 3, hours: float | None = None) -> list:
+        """최근 며칠(또는 몇 시간) 동안 본 딜, 최신순. 각 딜에 first_seen이 붙는다."""
+        since = (datetime.now(KST) - (timedelta(hours=hours) if hours else timedelta(days=days))).isoformat()
         rows = self.db.execute(
             "SELECT data, group_key, first_seen FROM deals WHERE first_seen >= ? AND source != 'seed'"
             " ORDER BY first_seen DESC, rowid DESC", (since,))
@@ -141,4 +156,26 @@ class Store:
             " notified_at = excluded.notified_at",
             (watch_id, group_key, price, _now()),
         )
+        self.db.commit()
+
+    # ── 매일 글 ─────────────────────────────────────────
+    def posted_keys(self, board: str, days: int = 2) -> set:
+        """그 게시판에 최근 올린 딜 묶음 (다음 글에서 다시 올리지 않으려고)."""
+        since = (datetime.now(KST) - timedelta(days=days)).isoformat()
+        return {r["group_key"] for r in self.db.execute(
+            "SELECT group_key FROM posted WHERE board = ? AND posted_at >= ?", (board, since))}
+
+    def mark_posted(self, board: str, group_keys: list):
+        self.db.executemany(
+            "INSERT OR REPLACE INTO posted (board, group_key, posted_at) VALUES (?, ?, ?)",
+            [(board, key, _now()) for key in group_keys])
+        self.db.commit()
+
+    # ── 상태 값 (마지막으로 읽은 메시지, 올린 시간대 등) ──────
+    def get_meta(self, key: str) -> str | None:
+        row = self.db.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+        return row["value"] if row else None
+
+    def set_meta(self, key: str, value: str):
+        self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", (key, value))
         self.db.commit()

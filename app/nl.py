@@ -83,7 +83,6 @@ _COMMAND_SYSTEM = """너는 친구들 디스코드 방의 핫딜 봇 '살래말�
 - 가격은 원 단위 정수로 바꿔.
 - 알림을 끄거나 지워달라고 하면 아래 목록에서 맞는 watch_id를 골라 remove_watch를 불러.
 - "메가커피 올라왔어?", "에어팟 핫딜 있었어?"처럼 특정 상품이 떴는지 물으면 search_deals(query=상품). 알림을 걸어달라는 말이 없으면 add_watch를 부르지 마.
-- show_deals는 "오늘 핫딜/랭킹/TOP 보여줘"처럼 목록 자체를 원할 때만 불러.
 - "지금 뭐 알림 받게 되어있어?", "내 알림"은 list_watch. "다들/전체/모두 뭐 걸어놨어?"처럼 모든 사람 것을 물으면 list_watch(everyone=true).
 
 등록된 친구: {people}
@@ -118,10 +117,6 @@ def _command_tools():
             {"query": {"type": "string", "description": "찾을 상품 (예: 메가커피, 게이밍 모니터)"},
              "max_price": {"type": "integer", "description": "이 가격(원) 이하만. 언급 없으면 생략"}},
             ["query"]),
-        _fn("show_deals", "지금 핫딜 TOP 목록(랭킹)을 보여준다.",
-            {"category": {"type": "string", "enum": ["인기", "게임", "IT", "식품"],
-                          "description": "카테고리 언급이 없으면 인기"}},
-            ["category"]),
     ])]
 
 

@@ -8,6 +8,7 @@ import re
 import requests
 
 from . import nl
+from . import monitoring
 from .commands import HELP, Handler, text
 from .notifier import API_BASE, BOT_TOKEN, CHANNEL_ID, THREAD_ID, message_link, send_dm, send_message
 from .store import Store
@@ -60,10 +61,12 @@ def _answer(handler: Handler, store: Store, channel: str, me: str, msg: dict, dr
     mentions = {f"<@{u['id']}>": _name(u) for u in msg.get("mentions", []) if u["id"] != me}
     try:
         result = nl.parse_command(_name(msg["author"]), words, mentions, store.related_watches(sender))
-    except nl.QuotaExceeded:
+    except nl.QuotaExceeded as exc:
+        monitoring.error("gemini.command", exc, "Gemini 멘션 해석 할당량 초과", "Gemini 할당량·키 확인")
         reply(text("오늘 AI 한도를 다 썼어요 😢 내일 다시 말해주세요!"))
         return
-    except Exception:
+    except Exception as exc:
+        monitoring.error("gemini.command", exc, "AI 멘션 해석 실패", "Gemini 키·응답 형식 확인")
         logger.exception("parse failed: %s", words)
         reply(text("말을 잘 못 알아들었어요. 다시 한 번 말해주세요!"))
         return

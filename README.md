@@ -50,3 +50,7 @@ cp .env.example .env                       # 봇 토큰·채널 ID·Gemini 키
 | [docs/versions.md](docs/versions.md) | 버전별 변화 (맥 크롬 수집 → GitHub Actions) |
 
 Python · requests · BeautifulSoup · Gemini · Discord REST (Components V2).
+
+## 운영 모니터링
+
+개인 Agents 서버에 기능 장애·오류 요약·복구 알림을 모읍니다. 실행 누락은 Healthchecks가 별도로 감지합니다. [모니터링 설정·운영 안내](docs/monitoring.md).

@@ -13,6 +13,7 @@ import requests
 from . import people
 from .notifier import API_BASE, BOT_TOKEN, CHANNEL_ID, THREAD_ID, send_message
 from .store import Store
+from . import monitoring
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,7 @@ def update(store: Store | None = None, channel_id: str | None = None) -> None:
             resp = requests.patch(f"{API_BASE}/channels/{channel_id}/messages/{message_id}",
                                   json=message, headers=HEADERS, timeout=10)
             if resp.ok:
+                monitoring.observe("board.keywords")
                 return
             logger.warning("board edit failed (%s), posting a new one", resp.status_code)
 
@@ -79,6 +81,11 @@ def update(store: Store | None = None, channel_id: str | None = None) -> None:
         pin = requests.put(f"{API_BASE}/channels/{channel_id}/pins/{message_id}",
                            headers=HEADERS, timeout=10)
         if not pin.ok:
+            monitoring.observe("board.pin", "degraded", "pin-failed", "키워드 안내 메시지 고정 실패", "봇의 메시지 고정 권한 확인", f"Discord HTTP {pin.status_code}")
             logger.warning("board pin failed (%s): pin message %s by hand", pin.status_code, message_id)
-    except Exception:
+        else:
+            monitoring.observe("board.pin")
+        monitoring.observe("board.keywords")
+    except Exception as exc:
+        monitoring.error("board.keywords", exc, "키워드 안내 메시지 갱신 실패")
         logger.exception("board update failed")

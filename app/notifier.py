@@ -2,6 +2,7 @@ import logging
 import os
 
 import requests
+from . import monitoring
 
 logger = logging.getLogger(__name__)
 
@@ -118,8 +119,19 @@ def send_dm(user_id: str, content: str) -> bool:
                              json={"content": content, "flags": 4},  # 4: 링크 미리보기 숨김
                              headers=headers, timeout=10)
         resp.raise_for_status()
+        monitoring.observe("discord.dm")
         return True
     except requests.RequestException as e:
+        # 50007 is a recipient's privacy preference, not a service incident.
+        response = getattr(e, "response", None)
+        blocked = False
+        if response is not None:
+            try:
+                blocked = response.json().get("code") == 50007
+            except ValueError:
+                pass
+        if not blocked:
+            monitoring.error("discord.dm", e, "Discord DM 전송 실패")
         detail = e.response.text[:200] if getattr(e, "response", None) is not None else e
         logger.warning("DM failed: %s", detail)
         return False

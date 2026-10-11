@@ -18,6 +18,11 @@ jobs:
   cycle:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      MONITOR_ENDPOINT: ${{ secrets.MONITOR_ENDPOINT }}
+      MONITOR_TOKEN: ${{ secrets.MONITOR_TOKEN }}
+      MONITOR_SERVICE: buy-or-not
+      HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
     steps:
       - uses: actions/checkout@v7
 
@@ -72,3 +77,9 @@ jobs:
         run: |
           gh cache list --repo "$GITHUB_REPOSITORY" --key state- --sort created_at --order desc --limit 100 --json id --jq '.[3:][].id' |
             xargs -r -n1 gh cache delete --repo "$GITHUB_REPOSITORY"
+
+      - name: Report workflow status and heartbeat
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: python scripts/monitor_workflow.py

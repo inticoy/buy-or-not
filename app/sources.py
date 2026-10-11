@@ -19,6 +19,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from .dedupe import parse_price
+from . import monitoring
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +185,9 @@ def collect(since: datetime) -> tuple[list, list]:
                 d["ended"] = d["ended"] or expired(d["title"], today)
             logger.info("source %s: %d deals", name, len(got))
             deals += got
+            monitoring.observe("source." + name)
         except Exception as e:
+            monitoring.error("source." + name, e, name + " 수집 실패", "출처 접근 제한·HTTP 상태·파서 확인")
             logger.error("source %s failed: %s", name, e)
             failed.append(name)
     return deals, failed

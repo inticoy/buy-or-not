@@ -4,6 +4,7 @@ import logging
 import os
 
 from . import people
+from . import monitoring
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +70,11 @@ def judge(watches: list, deals: list) -> list[dict]:
             config=types.GenerateContentConfig(
                 response_mime_type="application/json", response_json_schema=_JUDGE_SCHEMA),
         )
-        return json.loads(resp.text)["matches"]
+        matches = json.loads(resp.text)["matches"]
+        monitoring.observe("gemini.judge")
+        return matches
     except Exception as e:  # 한도 초과 등: 키워드 매칭은 계속 돌도록 삼킨다
+        monitoring.error("gemini.judge", e, "AI 관심사 매칭 실패 — 키워드 매칭은 계속 진행", "Gemini 키·할당량 확인")
         logger.error("gemini judge failed: %s", e)
         return []
 
@@ -146,4 +150,5 @@ def parse_command(sender: str, text: str, mentions: dict, watches: list) -> dict
             raise QuotaExceeded() from e
         raise
     calls = [(c.name, dict(c.args or {})) for c in (resp.function_calls or [])]
+    monitoring.observe("gemini.command")
     return {"calls": calls, "reply": None if calls else (resp.text or "").strip()}

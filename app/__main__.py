@@ -16,6 +16,7 @@ load_dotenv()
 from . import board, matcher, mentions, ranking, sources
 from .notifier import BOARD_COLOR, board_header, build_board, post_alert, post_board
 from .store import KST, Store
+from . import monitoring
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -40,6 +41,8 @@ def collect_and_alert(store: Store, dry_run: bool) -> bool:
     """딜을 모으고 새 딜로 알림. 처음 실행(DB가 비었음)이면 True."""
     first_run = store.is_empty()
     deals, failed = sources.collect(datetime.now(KST) - timedelta(hours=COLLECT_HOURS))
+    if len(failed) == len(sources.SOURCES):
+        monitoring.observe("collect", "failure", "all-sources-failed", "모든 딜 수집원 조회 실패", "출처 접근 제한·실행 로그 확인")
     new = []
     for source in sources.SOURCES:
         new += store.record_deals(source, [d for d in deals if d["source"] == source])
@@ -107,17 +110,28 @@ def due_boards(store: Store, now: datetime) -> list[tuple[str, str]]:
 
 
 def cycle(dry_run: bool = False) -> bool:
+    monitoring.begin()
+    if not dry_run:
+        for component, present, description in [
+            ("gemini.config", bool(os.environ.get("GEMINI_API_KEY")), "Gemini 키"),
+            ("discord.config", bool(os.environ.get("DISCORD_BOT_TOKEN") and (os.environ.get("DISCORD_THREAD_PROD") or os.environ.get("DISCORD_CHANNEL_PROD"))), "Discord 봇 토큰·게시 목적지"),
+        ]:
+            monitoring.observe(component, "ok" if present else "degraded", "ok" if present else "missing-config", "정상 확인" if present else description + " 설정 누락", "ENV_FILE 확인")
     store = Store()
     seed_if_empty(store)
     ok, first_run = True, False
     try:
         first_run = collect_and_alert(store, dry_run)
-    except Exception:
+        monitoring.observe("collect")
+    except Exception as exc:
+        monitoring.error("collect", exc, "딜 수집 또는 관심사 알림 실패", severity="failure")
         logger.exception("collect failed")
         ok = False
     try:
         logger.info("mentions answered: %d", mentions.process(store, dry_run))
-    except Exception:
+        monitoring.observe("mentions")
+    except Exception as exc:
+        monitoring.error("mentions", exc, "Discord 멘션 처리 실패")
         logger.exception("mentions failed")
         ok = False
     for board_id, key in due_boards(store, datetime.now(KST)):
@@ -127,10 +141,14 @@ def cycle(dry_run: bool = False) -> bool:
         try:
             if post(store, board_id, dry_run) and not dry_run:
                 store.set_meta(key, datetime.now(KST).isoformat(timespec="seconds"))
-        except Exception:  # 한 게시판이 실패해도 나머지는 올리고, 다음 실행에서 다시 시도한다
+                monitoring.observe("board." + board_id)
+        except Exception as exc:  # 한 게시판이 실패해도 나머지는 올리고, 다음 실행에서 다시 시도한다
+            monitoring.error("board." + board_id, exc, "게시판 글 전송 실패")
             logger.exception("post %s failed", board_id)
             ok = False
         time.sleep(2)
+    if not dry_run and os.environ.get("MONITOR_ENDPOINT") and not monitoring.finish("buy-or-not"):
+        ok = False
     return ok
 
 

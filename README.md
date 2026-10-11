@@ -4,14 +4,14 @@
 
 친구들 디스코드 핫딜 스레드에 **오늘의 인기 핫딜**을 골라 올리고, 친구들이 걸어둔 관심사에 맞는 딜이 뜨면 그 사람에게 알려 주는 봇입니다.
 
-- 왓딜(펨코·뽐뿌·아카라이브·퀘이사존·어미새…)과 루리웹·클리앙의 새 딜을 모아, 댓글·추천 반응으로 순위를 매깁니다. 같은 딜과 같은 행사는 한 줄로 묶습니다.
+- 여러 핫딜 커뮤니티의 새 딜을 모아, 댓글·추천 반응으로 순위를 매깁니다. 같은 딜과 같은 행사는 한 줄로 묶습니다.
 - **🔥 인기 TOP 5**는 12시·21시, **🎮 게임 · 💻 IT · 🍜 식품 TOP 5**는 12시에 올립니다.
 - `@살래말래 메가커피 뜨면 알려줘`처럼 말하면 Gemini가 알아듣고 알림을 걸어 줍니다. "괜찮은 게이밍 모니터"처럼 종류로 말해도 됩니다.
 - GitHub Actions에서 돌며 서버가 필요 없습니다 ([cron-job.org](https://cron-job.org)가 15분마다 실행).
 
 ## 카드 예시
 
-> 디스코드에 올라오는 모습입니다 (누르면 크게). 실제 딜로 만들었고 멘션만 가명입니다 ([tools/readme_cards.py](tools/readme_cards.py)).
+> 디스코드에 올라오는 모습입니다 (누르면 크게). 실제 딜로 만들었고 멘션은 가명, 커뮤니티 이름은 가렸습니다 ([tools/readme_cards.py](tools/readme_cards.py)).
 
 <p>
   <a href="docs/images/card-hot.png"><img src="docs/images/card-hot.png" width="48%" align="top" alt="인기 TOP 5 카드"></a>
@@ -47,6 +47,6 @@ cp .env.example .env                       # 봇 토큰·채널 ID·Gemini 키
 | [docs/setup.md](docs/setup.md) | GitHub Actions 비밀값·cron-job.org 설정, 로컬 실행 |
 | [docs/how-it-works.md](docs/how-it-works.md) | 출처, 순위 매기기, 글·알림·@멘션 동작 |
 | [docs/flow.html](docs/flow.html) | 흐름도 |
-| [docs/versions.md](docs/versions.md) | 버전별 변화 (알구몬 → hotdeal.zip → Actions) |
+| [docs/versions.md](docs/versions.md) | 버전별 변화 (맥 크롬 수집 → GitHub Actions) |
 
 Python · requests · BeautifulSoup · Gemini · Discord REST (Components V2).

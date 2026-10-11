@@ -86,7 +86,7 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
       <h2>📥 딜 모으기 · 알림</h2>
       <p class="sub">매 실행 · <code>sources.py</code> · <code>matcher.py</code></p>
       <div class="flow">
-        <div class="node n-blue">최근 24시간 딜 읽기<small>왓딜 API(펨코·뽐뿌·아카·퀘이사존…) · 루리웹 · 클리앙</small></div>
+        <div class="node n-blue">최근 24시간 딜 읽기<small>핫딜 모음 사이트 API · 커뮤니티 게시판 2곳</small></div>
         <div class="arrow"></div>
         <div class="node">SQLite에 기록<small>같은 딜은 묶고, 본 딜은 댓글 수만 새로</small></div>
         <div class="arrow"></div>
@@ -137,7 +137,7 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
     <table>
       <tbody>
         <tr><th>실행</th><td>GitHub Actions <code>daily.yml</code> (cron-job.org가 15분마다 workflow_dispatch)</td></tr>
-        <tr><th>출처</th><td>왓딜 API · 루리웹 · 클리앙 (hotdeal.zip·알구몬·펨코 직접 읽기는 Actions IP에서 막힘)</td></tr>
+        <tr><th>출처</th><td>핫딜 모음 사이트 API · 커뮤니티 게시판 (Cloudflare 등으로 막히는 곳은 모음 사이트를 통해)</td></tr>
         <tr><th>저장</th><td><code>data/sallae.db</code>, <code>data/board.json</code> — Actions 캐시로 다음 실행에 넘김. 알림 목록은 비밀값 <code>SEED_JSON</code>으로 복원</td></tr>
         <tr><th>AI</th><td>Gemini <code>gemini-3.5-flash-lite</code> — 멘션 해석(도구 호출), 설명형 알림 판단</td></tr>
         <tr><th>비밀값</th><td><code>ENV_FILE</code> · <code>PEOPLE_JSON</code> · <code>SEED_JSON</code> — 로그에는 친구 이름·ID를 남기지 않음 (<a href="setup.md">setup.md</a>)</td></tr>
@@ -149,8 +149,8 @@ code{background:var(--neutral-bg);padding:1px 5px;border-radius:4px;font-size:.9
   <div class="tw">
     <table>
       <tbody>
-        <tr><th>v1</th><td>requests로 알구몬 랭킹 → Actions(데이터센터 IP)에서 403</td></tr>
-        <tr><th>v2·v3</th><td>맥 Chrome + AppleScript로 알구몬·hotdeal.zip, 관심사 알림, 상주 <code>@멘션</code> 봇 → 맥이 꺼지면 끊김</td></tr>
+        <tr><th>v1</th><td>requests로 모음 사이트 랭킹 → Actions(데이터센터 IP)에서 403</td></tr>
+        <tr><th>v2·v3</th><td>맥 Chrome + AppleScript로 모음 사이트 2곳, 관심사 알림, 상주 <code>@멘션</code> 봇 → 맥이 꺼지면 끊김</td></tr>
         <tr><th>v4</th><td class="good">Actions로 이전, 출처를 Actions에서 읽히는 곳으로, 순위를 직접 (2026-10-11~)</td></tr>
       </tbody>
     </table>

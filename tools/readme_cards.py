@@ -1,7 +1,7 @@
 """README용: 실제 카드 메시지를 디스코드에 올라온 모습처럼 한 장으로 (다크 테마, 2배 해상도).
 
 지금 딜을 출처에서 한 번 읽어 임시 DB로 인기 카드와 알림 카드를 만들고, docs/images/에 PNG로 저장한다.
-알림 카드의 멘션은 가명. 실행: .venv/bin/python -m tools.readme_cards  (Pillow 필요, 실행용 의존성 아님)
+알림 카드의 멘션은 가명, 커뮤니티 이름은 "커뮤니티"로 가린다. 실행: .venv/bin/python -m tools.readme_cards  (Pillow 필요, 실행용 의존성 아님)
 """
 from __future__ import annotations
 
@@ -217,15 +217,17 @@ def main() -> None:
         recent = store.recent_deals(hours=16)
         now = datetime.now(KST).replace(hour=21)
         picks = ranking.top(recent, 5)
+        for g in picks:  # README에는 커뮤니티 이름을 쓰지 않는다
+            g["communities"] = ["커뮤니티"] if len(g["communities"]) < 2 else [f"커뮤니티 {len(g['communities'])}곳"]
         hot = build_board(board_header(now, "인기", "🔥"), "저녁 TOP 5", picks, BOARD_COLOR["hot"],
-                          ("hotdeal.zip 인기 더 보기", "https://hotdeal.zip/"))
+                          ("인기 핫딜 더 보기", "https://example.com/"))
         usable = [d for d in recent if d.get("image_url") and d.get("product_url") and d.get("price_str")]
         deal = next((d for d in usable if "모니터" in d["title"]), None)
         hit = {"owner_id": "1", "want": "게이밍 모니터", "price_drop": False, "reason": "사양이 게임용에 맞고 반응도 많아요."}
         if deal is None:  # 모니터 딜이 없으면 키워드 알림 예시로
             deal = usable[0]
             hit |= {"want": deal["title"].split()[0], "reason": None}
-        alert = build_alert([hit], deal)
+        alert = build_alert([hit], deal | {"community": "커뮤니티"})
         store.db.close()
     OUT.mkdir(parents=True, exist_ok=True)
     for name, payload, mentions in (("card-hot", hot, ()), ("card-alert", alert, ["민수"])):

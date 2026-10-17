@@ -15,7 +15,7 @@ API_BASE = "https://discord.com/api/v10"
 PLACEHOLDER_IMG = "https://raw.githubusercontent.com/inticoy/buy-or-not/main/assets/placeholder.png"
 
 RANK_EMOJI = {1: "🥇", 2: "🥈", 3: "🥉"}
-# @silent: 스레드 글은 아무에게도 푸시가 가지 않게 하고, 받아야 할 사람에게는 DM을 따로 보낸다
+# @silent: 스레드 글은 아무에게도 푸시가 가지 않게 한다. 관심사 알림은 DM으로만 간다
 SUPPRESS_NOTIFICATIONS = 1 << 12
 DAYS_KO = ["월", "화", "수", "목", "금", "토", "일"]
 
@@ -108,15 +108,16 @@ def message_link(channel_id: str, message_id: str) -> str:
     return f"https://discord.com/channels/{_guild_ids[channel_id]}/{channel_id}/{message_id}"
 
 
-def send_dm(user_id: str, content: str) -> bool:
-    """DM으로 푸시를 보낸다. 상대가 서버 멤버 DM을 막았으면 False."""
+def send_dm(user_id: str, content: str | dict) -> bool:
+    """DM으로 푸시를 보낸다. content는 글 또는 메시지 payload. 상대가 서버 멤버 DM을 막았으면 False."""
     headers = {"Authorization": f"Bot {BOT_TOKEN}"}
     try:
         dm = requests.post(f"{API_BASE}/users/@me/channels", json={"recipient_id": user_id},
                            headers=headers, timeout=10)
         dm.raise_for_status()
         resp = requests.post(f"{API_BASE}/channels/{dm.json()['id']}/messages",
-                             json={"content": content, "flags": 4},  # 4: 링크 미리보기 숨김
+                             json=content if isinstance(content, dict)
+                             else {"content": content, "flags": 4},  # 4: 링크 미리보기 숨김
                              headers=headers, timeout=10)
         resp.raise_for_status()
         monitoring.observe("discord.dm")
@@ -160,12 +161,16 @@ def _mentions(user_ids: list) -> str:
     return ", ".join(f"<@{uid}>님" for uid in user_ids)
 
 
-def build_alert(hits: list, deal: dict) -> dict:
-    """hits: [{"owner_id", "want", "reason", "price_drop"}] — 같은 딜에 걸린 관심사들."""
+def build_alert(hits: list, deal: dict, mention: bool = True) -> dict:
+    """hits: [{"owner_id", "want", "reason", "price_drop"}] — 같은 딜에 걸린 관심사들.
+
+    mention=False는 DM용: 태그 없이 받는 사람에게 바로 말한다.
+    """
     owners = list(dict.fromkeys(h["owner_id"] for h in hits))
     where = deal.get("shop") or deal.get("community") or "커뮤니티"
     drop = " 가격이 더 내려갔어요!" if any(h.get("price_drop") for h in hits) else ""
-    headline = f"{_mentions(owners)}, {where}에서 **{_title(deal['title'])}** 핫딜이 떴어요!{drop}"
+    to = f"{_mentions(owners)}, " if mention else "🔔 "
+    headline = f"{to}{where}에서 **{_title(deal['title'])}** 핫딜이 떴어요!{drop}"
 
     price = deal.get("price_str") or "가격 미확인"
     if deal.get("price") is None and deal.get("price_str"):
@@ -191,22 +196,20 @@ def build_alert(hits: list, deal: dict) -> dict:
                 card, {"type": 1, "components": buttons}, {"type": 14}, {"type": 10, "content": footer},
             ]},
         ],
-        "allowed_mentions": {"users": owners},  # 대상자만 알림이 가게
+        "allowed_mentions": {"users": owners if mention else []},  # 대상자만 알림이 가게
     }
 
 
 def post_alert(hits: list, deal: dict, dry_run: bool = False) -> None:
-    """관심사에 맞는 딜을 핫딜 thread에 조용히 올리고, 대상자마다 DM으로 알린다."""
-    message = build_alert(hits, deal)
+    """관심사에 맞는 딜을 대상자마다 DM으로 알린다. DM을 막은 사람만 핫딜 thread에서 태그한다."""
     if dry_run:
-        print(f"\n[DRY RUN] alert → {message['components'][0]['content']}")
+        print(f"\n[DRY RUN] alert → {build_alert(hits, deal)['components'][0]['content']}")
         return
-    channel = THREAD_ID or CHANNEL_ID
-    link = message_link(channel, send_message(channel, message))
-    price = deal.get("price_str") or "가격 미확인"
-    where = deal.get("shop") or deal.get("community") or "커뮤니티"
+    blocked = []
     for owner in dict.fromkeys(h["owner_id"] for h in hits):
-        wants = " / ".join(dict.fromkeys(f"'{h['want']}'" for h in hits if h["owner_id"] == owner))
-        send_dm(owner, f"🔔 {wants} 알림 · {where}에서 **{deal['title']}** 핫딜이 떴어요! ({price})\n"
-                       f"→ {link}")
+        mine = [h for h in hits if h["owner_id"] == owner]
+        if not send_dm(owner, build_alert(mine, deal, mention=False)):
+            blocked += mine
+    if blocked:
+        send_message(THREAD_ID or CHANNEL_ID, build_alert(blocked, deal), silent=False)
     logger.info("alert sent: %d watch(es) → %s", len(hits), deal["title"])

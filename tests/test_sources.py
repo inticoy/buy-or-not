@@ -56,3 +56,16 @@ class RankingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GiveawayTest(unittest.TestCase):
+    def test_keyword_only_as_extra_is_skipped(self):
+        from app.matcher import is_giveaway, match
+        self.assertTrue(is_giveaway("메가커피", "[G마켓] 도루코 면도기 + 메가커피 아메리카노 (9,900원)"))
+        self.assertTrue(is_giveaway("메가커피", "도루코 면도기 구매시 메가커피 기프티콘 증정"))
+        self.assertFalse(is_giveaway("메가커피", "[메가커피] 아메리카노 1+1"))
+        self.assertFalse(is_giveaway("메가커피", "[카카오톡] 메가커피 아메리카노 2+1 (6,000원)"))
+        self.assertFalse(is_giveaway("메가커피", "[네이버] 메가커피 모바일 금액권 1만원 (9,000원)"))
+        watch = {"id": 1, "keywords": ["메가커피"], "max_price": None}
+        deals = [{"id": "a", "title": "도루코 면도기 + 메가커피 증정"}, {"id": "b", "title": "[메가커피] 아메리카노 1+1"}]
+        self.assertEqual([d["id"] for _, d, _ in match([watch], deals, judge=lambda w, d: [])], ["b"])

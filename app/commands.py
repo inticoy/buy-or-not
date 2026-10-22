@@ -16,6 +16,7 @@ HELP = ("이렇게 말해주세요 🙂\n"
         "• `괜찮은 게이밍 모니터 나오면 @친구 한테 알려줘`\n"
         "• `지금 뭐 알림 받게 되어있어?` / `다들 뭐 걸어놨어?`\n"
         "• `메가커피 알림 꺼줘`\n"
+        "• `최근에 받은 알림 보여줘` / `다들 무슨 알림 받았어?`\n"
         "• `메가커피 올라왔어?` (최근 3일 딜 검색)\n"
         "-# 15분마다 확인해서 답이 조금 늦을 수 있어요")
 SEARCH_LIMIT = 5
@@ -84,6 +85,23 @@ class Handler:
         if not mine:
             return text(f"{board.who(who)}님은 아직 걸어둔 알림이 없어요.")
         return text(f"🔔 {board.who(who)}님이 받는 알림이에요\n" + "\n".join(board.describe(w) for w in mine))
+
+    def history_watch(self, sender: str, args: dict) -> dict:
+        everyone = bool(args.get("everyone"))
+        who = None if everyone else (people.resolve(args["for_user"]) if args.get("for_user") else sender)
+        if not everyone and who is None:
+            return text(f"'{args['for_user']}'님이 누군지 모르겠어요.")
+        rows = [r for r in self.store.notified_history(limit=200) if everyone or r["owner_id"] == who][:10]
+        whose = "다들" if everyone else f"{board.who(who)}님이"
+        if not rows:
+            return text(f"최근 7일 동안 {whose} 받은 알림이 없어요.")
+        lines = []
+        for r in rows:
+            title = r["title"][:50].replace("[", "［").replace("]", "］")
+            link = f"[{title}](<{r['url']}>)" if r.get("url") else title
+            tag = f" · {board.who(r['owner_id'])}" if everyone else ""
+            lines.append(f"• {_ago(r['notified_at'])} · '{r['want']}'{tag}\n  {link}")
+        return text(f"📬 최근 7일 동안 {whose} 받은 알림 {len(rows)}개예요\n" + "\n".join(lines))
 
     def search_deals(self, sender: str, args: dict) -> dict:
         query, max_price = args["query"], args.get("max_price")

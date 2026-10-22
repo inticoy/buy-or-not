@@ -158,6 +158,21 @@ class Store:
         )
         self.db.commit()
 
+    def notified_history(self, days: int = 7, limit: int = 15) -> list:
+        """최근 보낸 관심사 알림, 최신순. 각 행: owner_id, want, notified_at, title, url."""
+        since = (datetime.now(KST) - timedelta(days=days)).isoformat()
+        rows = self.db.execute(
+            "SELECT w.owner_id, w.want, n.notified_at,"
+            " (SELECT data FROM deals d WHERE d.group_key = n.group_key LIMIT 1) AS data"
+            " FROM notified n JOIN watches w ON w.id = n.watch_id"
+            " WHERE n.notified_at >= ? ORDER BY n.notified_at DESC LIMIT ?", (since, limit))
+        out = []
+        for r in rows:
+            deal = json.loads(r["data"]) if r["data"] else {}
+            out.append({"owner_id": r["owner_id"], "want": r["want"], "notified_at": r["notified_at"],
+                        "title": deal.get("title", "(지난 딜)"), "url": deal.get("url")})
+        return out
+
     # ── 매일 글 ─────────────────────────────────────────
     def posted_keys(self, board: str, days: int = 2) -> set:
         """그 게시판에 최근 올린 딜 묶음 (다음 글에서 다시 올리지 않으려고)."""

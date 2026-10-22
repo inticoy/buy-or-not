@@ -76,7 +76,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh cache list --repo "$GITHUB_REPOSITORY" --key state- --sort created_at --order desc --limit 100 --json id --jq '.[3:][].id' |
-            xargs -r -n1 gh cache delete --repo "$GITHUB_REPOSITORY"
+            xargs -r -n1 gh cache delete --repo "$GITHUB_REPOSITORY" || true  # 정리 실패(일시적 502 등)로 실행을 실패 처리하지 않음
 
       - name: Report workflow status and heartbeat
         if: always()

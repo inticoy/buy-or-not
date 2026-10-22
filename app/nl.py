@@ -9,11 +9,16 @@ from . import monitoring
 logger = logging.getLogger(__name__)
 
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+# 관심사 판단은 모델명으로 사양(해상도 등)을 알아봐야 해서 한 단계 큰 모델, 실패하면 MODEL로 다시
+JUDGE_MODEL = os.environ.get("GEMINI_JUDGE_MODEL", "gemini-3.5-flash")
 
 _JUDGE_PROMPT = """친구들이 등록한 관심사(watches)와 새로 올라온 핫딜(deals)이 있어.
 각 관심사에 맞는 딜을 골라. 상품 종류가 관심사와 같아야 해. 예: '게이밍 모니터'에 게이밍 헤드셋·마우스는 넣지 마.
 화면이 있다고 다 모니터가 아니야. TV, 스탠바이미 같은 이동형·스마트 스크린, 태블릿, 노트북, 휴대용 모니터는 '모니터'가 아니야.
 '게이밍'처럼 용도가 붙으면 그 용도에 맞는 상품만 넣어. 예: '게이밍 모니터'는 제목에 게이밍이라고 있거나 주사율이 144Hz 이상인 PC 모니터만. 사무용 60~100Hz 모니터는 빼.
+해상도 조건(예: 'FHD 제외', 'QHD 이상')이 있으면 제목의 표기(FHD·QHD·4K, 1080p, 2560x1440)와 모델명으로 판단해.
+모델명 예: LG 울트라기어는 끝 글자 F=FHD, Q=QHD, U=4K(27GS60F는 FHD, 27GR75Q는 QHD). 24인치 이하 15만원 이하 게이밍 모니터는 대개 FHD야.
+해상도 조건이 있는데 해상도를 알 수 없으면 넣지 마.
 애매하면 넣지 마. 알림이 틀리게 오는 것보다 놓치는 게 나아.
 관심사에 '관련'이라는 말이 있을 때만 주변기기·액세서리까지 넣어. 예: '스위치 관련 할인'에는 프로콘, 스위치용 SD카드도 넣어.
 max_price가 있으면 그 가격(원) 이하만 넣어. 가격을 알 수 없으면 넣어도 돼.
@@ -67,12 +72,14 @@ def judge(watches: list, deals: list) -> list[dict]:
                            "category": d.get("category"), "comments": d.get("comments")}
                           for d in deals], ensure_ascii=False),
     )
+    config = types.GenerateContentConfig(
+        response_mime_type="application/json", response_json_schema=_JUDGE_SCHEMA)
     try:
-        resp = _client().models.generate_content(
-            model=MODEL, contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json", response_json_schema=_JUDGE_SCHEMA),
-        )
+        try:
+            resp = _client().models.generate_content(model=JUDGE_MODEL, contents=prompt, config=config)
+        except Exception as e:  # 한도 초과·혼잡이면 작은 모델로 한 번 더
+            logger.warning("judge model %s failed, retrying with %s: %s", JUDGE_MODEL, MODEL, e)
+            resp = _client().models.generate_content(model=MODEL, contents=prompt, config=config)
         matches = json.loads(resp.text)["matches"]
         monitoring.observe("gemini.judge")
         return matches

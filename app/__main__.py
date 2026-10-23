@@ -13,8 +13,8 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 load_dotenv()
 
-from . import board, matcher, mentions, ranking, sources
-from .notifier import BOARD_COLOR, board_header, build_board, post_alert, post_board
+from . import board, matcher, mentions, ranking, sources, voice
+from .notifier import BOARD_COLOR, CHANNEL_ID, THREAD_ID, board_header, build_board, post_alert, post_board, send_message
 from .store import KST, Store
 from . import monitoring
 
@@ -93,6 +93,15 @@ def post(store: Store, board_id: str, dry_run: bool) -> bool:
     post_board(message, dry_run)
     if not dry_run:
         store.mark_posted(board_id, [key for g in picks for key in [g["key"]] + [e["key"] for e in g.get("same_event", [])]])
+    if board_id == "hot":  # 이번 주에 손꼽히는 딜이 있을 때만 카드 아래에 한마디 (평범한 날은 조용히)
+        shown = store.posted_keys("hot", days=7) - {g["key"] for g in picks}
+        ranks = voice.standouts(picks, [g for g in ranking.groups(store.recent_deals(days=8)) if g["key"] in shown])
+        if lines := voice.comment(picks, ranks):
+            if dry_run:
+                print("[DRY RUN] comment:", lines)
+            else:
+                time.sleep(1)
+                send_message(THREAD_ID or CHANNEL_ID, {"content": "\n".join(lines), "allowed_mentions": {"parse": []}})
     logger.info("%s — %s", cfg["name"], [g["head"]["title"][:30] for g in picks])
     return True
 

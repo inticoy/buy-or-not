@@ -67,17 +67,19 @@ def alert(store: Store, new: list, dry_run: bool) -> None:
                          "reason": reason, "price_drop": kind == "drop"})
 
     for deal, hits in hits_by_deal.values():
-        post_alert(hits, deal, dry_run)
+        outcomes = post_alert(hits, deal, dry_run)
         if dry_run:
             continue
         for hit in hits:
+            if not outcomes.get(hit["owner_id"]):
+                continue
             store.mark_notified(hit["watch"]["id"], deal["group_key"], deal.get("price"))
             if hit["watch"]["once"]:
                 store.deactivate(hit["watch"]["id"])
                 board.update(store)
 
 
-def post(store: Store, board_id: str, dry_run: bool) -> bool:
+def post(store: Store, board_id: str, dry_run: bool, slot_key: str | None = None) -> bool:
     cfg = BOARDS[board_id]
     now = datetime.now(KST)
     exclude = store.posted_keys(board_id)
@@ -92,6 +94,8 @@ def post(store: Store, board_id: str, dry_run: bool) -> bool:
                           BOARD_COLOR[board_id], cfg["more"])
     post_board(message, dry_run)
     if not dry_run:
+        if slot_key:
+            store.set_meta(slot_key, datetime.now(KST).isoformat(timespec="seconds"))
         store.mark_posted(board_id, [key for g in picks for key in [g["key"]] + [e["key"] for e in g.get("same_event", [])]])
     if board_id == "hot":  # 이번 주에 손꼽히는 딜이 있을 때만 카드 아래에 한마디 (평범한 날은 조용히)
         shown = store.posted_keys("hot", days=7) - {g["key"] for g in picks}
@@ -150,8 +154,7 @@ def cycle(dry_run: bool = False) -> bool:
             store.set_meta(key, "skipped: first run")
             continue
         try:
-            if post(store, board_id, dry_run) and not dry_run:
-                store.set_meta(key, datetime.now(KST).isoformat(timespec="seconds"))
+            if post(store, board_id, dry_run, slot_key=key) and not dry_run:
                 monitoring.observe("board." + board_id)
         except Exception as exc:  # 한 게시판이 실패해도 나머지는 올리고, 다음 실행에서 다시 시도한다
             monitoring.error("board." + board_id, exc, "게시판 글 전송 실패")
@@ -228,4 +231,5 @@ def main():
         parser.print_help()
 
 
-main()
+if __name__ == "__main__":
+    main()

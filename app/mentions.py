@@ -43,47 +43,62 @@ def process(store: Store, dry_run: bool = False) -> int:
     handler, answered = Handler(store), 0
     for msg in messages:
         if not msg["author"].get("bot") and any(u["id"] == me for u in msg.get("mentions", [])):
-            _answer(handler, store, channel, me, msg, dry_run)
-            answered += 1
+            try:
+                _answer(handler, store, channel, me, msg, dry_run)
+                answered += 1
+            except Exception as exc:
+                if dry_run:
+                    raise
+                key = f"mentions:attempts:{msg['id']}"
+                attempts = int(store.get_meta(key) or "0") + 1
+                store.set_meta(key, str(attempts))
+                monitoring.error("discord.reply", exc, "멘션 답장 실패")
+                if attempts < 3:
+                    raise
+                logger.warning("giving up reply after %d attempts", attempts)
         if not dry_run:
             store.set_meta(LAST_KEY, msg["id"])  # 하나씩 기록해 실패해도 같은 말에 두 번 답하지 않는다
     return answered
 
 
 def _answer(handler: Handler, store: Store, channel: str, me: str, msg: dict, dry_run: bool) -> None:
+    payloads = None if dry_run else store.handled_replies(msg["id"])
+    if payloads is None:
+        payloads = _prepare(handler, store, me, msg, dry_run)
+        if not dry_run and store.handled_replies(msg["id"]) is None:
+            store.mark_handled(msg["id"], payloads)
+    for payload in payloads:
+        payload = payload.copy()
+        dm = payload.pop("_dm", None)
+        if dry_run:
+            print("[DRY RUN] reply:", payload)
+            continue
+        message_id = send_message(channel, payload, msg["id"])
+        if dm and message_id:
+            if people.is_discord(dm[0]):
+                send_dm(dm[0], f"{dm[1]}\n→ {message_link(channel, message_id)}")
+            elif email := people.woojoo_of(dm[0]):
+                push_woojoo(email, "살래말래", dm[1], "https://woojoo.woojoo.workers.dev/")
+
+
+def _prepare(handler: Handler, store: Store, me: str, msg: dict, dry_run: bool) -> list:
     words = re.sub(rf"<@!?{me}>", "", msg["content"]).strip()
     sender = msg["author"]["id"]
-    reply = (lambda payload: print("[DRY RUN] reply:", payload)) if dry_run else \
-        (lambda payload: send_message(channel, payload, msg["id"]))
     if not words:
-        reply(text(HELP))
-        return
+        return [text(HELP)]
     mentions = {f"<@{u['id']}>": _name(u) for u in msg.get("mentions", []) if u["id"] != me}
     try:
         result = nl.parse_command(_name(msg["author"]), words, mentions, store.related_watches(sender))
     except nl.QuotaExceeded as exc:
         monitoring.error("gemini.command", exc, "Gemini 멘션 해석 할당량 초과", "Gemini 할당량·키 확인")
-        reply(text("오늘 AI 한도를 다 썼어요 😢 내일 다시 말해주세요!"))
-        return
+        return [text("오늘 AI 한도를 다 썼어요 😢 내일 다시 말해주세요!")]
     except Exception as exc:
         monitoring.error("gemini.command", exc, "AI 멘션 해석 실패", "Gemini 키·응답 형식 확인")
         logger.exception("parse failed")  # Public Actions logs must not include user chat
-        reply(text("말을 잘 못 알아들었어요. 다시 한 번 말해주세요!"))
-        return
+        return [text("말을 잘 못 알아들었어요. 다시 한 번 말해주세요!")]
 
     if not result["calls"]:
-        reply(text(result["reply"] or HELP))
-        return
-    for name, args in result["calls"]:
-        logger.info("mention → %s", name)  # 공개 로그라 이름·알림 내용은 남기지 않는다
-        action = getattr(handler, name, None)
-        if action is None or dry_run:  # 시험 실행에서는 알림을 실제로 걸거나 끄지 않는다
-            continue
-        payload = action(sender, args)
-        dm = payload.pop("_dm", None)
-        message_id = reply(payload)
-        if dm and message_id:
-            if people.is_discord(dm[0]):
-                send_dm(dm[0], f"{dm[1]}\n→ {message_link(channel, message_id)}")
-            elif email := people.woojoo_of(dm[0]):
-                push_woojoo(email, "살래말래", dm[1], "https://woojoo.woojoo.workers.dev/")  # 디스코드 링크는 못 여니 우주 홈으로
+        return [text(result["reply"] or HELP)]
+    if dry_run:
+        return []
+    return handler.handle(msg["id"], sender, result["calls"])

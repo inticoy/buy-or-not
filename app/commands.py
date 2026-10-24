@@ -36,6 +36,23 @@ def _ago(iso: str) -> str:
 class Handler:
     def __init__(self, store: Store):
         self.store = store
+
+    def handle(self, message_id: str, sender: str, calls: list) -> list:
+        cached = self.store.handled_replies(message_id)
+        if cached is not None:
+            return cached
+        with self.store.command_transaction():
+            replies = []
+            for name, args in calls:
+                action = getattr(self, name, None)
+                if action is not None:
+                    logger.info("mention → %s", name)
+                    replies.append(action(sender, args))
+            self.store.mark_handled(message_id, replies)
+        if any(name in ("add_watch", "remove_watch") for name, _ in calls):
+            board.update(self.store)
+        return replies
+
     def add_watch(self, sender: str, args: dict) -> dict:
         owner = people.resolve(args["for_user"]) if args.get("for_user") else sender
         if owner is None:
@@ -43,7 +60,6 @@ class Handler:
         want, keywords = args["want"], args.get("keywords") or None
         max_price, once = args.get("max_price"), bool(args.get("once"))
         self.store.add_watch(owner, want, keywords, max_price, once, created_by=sender)
-        board.update(self.store)
 
         target = f"'{'/'.join(keywords)}' 키워드로" if keywords else f"'{want}'에 맞는"
         price = f" {board.won(max_price)} 이하" if max_price else ""
@@ -64,8 +80,6 @@ class Handler:
         removed = [mine[i] for i in args.get("watch_ids", []) if i in mine]
         for w in removed:
             self.store.deactivate(w["id"])
-        if removed:
-            board.update(self.store)
         if not removed:
             return text("어떤 알림을 끌지 못 찾았어요. `내 알림 목록`으로 확인해 주세요!")
         return text("🔕 " + ", ".join(f"'{w['want']}'" for w in removed) + " 알림을 껐어요.")

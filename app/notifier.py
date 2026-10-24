@@ -223,20 +223,30 @@ def build_alert(hits: list, deal: dict, mention: bool = True) -> dict:
     }
 
 
-def post_alert(hits: list, deal: dict, dry_run: bool = False) -> None:
-    """관심사에 맞는 딜을 대상자마다 DM으로 알린다. DM을 막은 사람만 핫딜 thread에서 태그한다."""
+def post_alert(hits: list, deal: dict, dry_run: bool = False) -> dict[str, bool]:
+    """DM·우주로 알리고 수신자별 성공 여부를 돌려준다. DM을 막은 사람은 thread에서 태그한다."""
     if dry_run:
         print(f"\n[DRY RUN] alert → {build_alert(hits, deal)['components'][0]['content']}")
-        return
+        return {}
+    outcomes = dict.fromkeys((h["owner_id"] for h in hits), False)
     blocked = []
     for owner in dict.fromkeys(h["owner_id"] for h in hits):
         mine = [h for h in hits if h["owner_id"] == owner]
         if email := people.woojoo_of(owner):
             watched = " / ".join(dict.fromkeys(f"'{h['want']}'" for h in mine))
             price = " · ".join(x for x in (deal.get("price_str"), deal.get("shop") or deal.get("community")) if x)
-            push_woojoo(email, f"🔔 {deal['title'][:60]}", f"{price}\n{watched} 알림", deal.get("product_url") or deal["url"])
-        if people.is_discord(owner) and not send_dm(owner, build_alert(mine, deal, mention=False)):
-            blocked += mine
+            outcomes[owner] = push_woojoo(email, f"🔔 {deal['title'][:60]}", f"{price}\n{watched} 알림", deal.get("product_url") or deal["url"])
+        if people.is_discord(owner):
+            if send_dm(owner, build_alert(mine, deal, mention=False)):
+                outcomes[owner] = True
+            else:
+                blocked += mine
     if blocked:
-        send_message(THREAD_ID or CHANNEL_ID, build_alert(blocked, deal), silent=False)
-    logger.info("alert sent: %d watch(es) → %s", len(hits), deal["title"])
+        try:
+            send_message(THREAD_ID or CHANNEL_ID, build_alert(blocked, deal), silent=False)
+            for hit in blocked:
+                outcomes[hit["owner_id"]] = True
+        except requests.RequestException as exc:
+            logger.warning("alert fallback failed: %s", exc)
+    logger.info("alert reached: %d/%d recipient(s) → %s", sum(outcomes.values()), len(outcomes), deal["title"])
+    return outcomes

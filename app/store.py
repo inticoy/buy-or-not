@@ -1,6 +1,7 @@
 """관심사·딜·알림 기록 (SQLite)."""
 import json
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -40,6 +41,10 @@ CREATE TABLE IF NOT EXISTS posted (
   posted_at   TEXT NOT NULL,
   PRIMARY KEY (board, group_key)
 );
+CREATE TABLE IF NOT EXISTS handled_messages (
+  message_id  TEXT PRIMARY KEY,
+  replies     TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS meta (
   key         TEXT PRIMARY KEY,
   value       TEXT NOT NULL
@@ -64,6 +69,30 @@ class Store:
         self.db = sqlite3.connect(path, timeout=10, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(_SCHEMA)
+        self._in_transaction = False
+
+    def _commit(self):
+        if not self._in_transaction:
+            self.db.commit()
+
+    @contextmanager
+    def command_transaction(self):
+        # 명령 적용과 답장 저장은 함께 커밋한다. 재시도 때 명령이 다시 적용되지 않게.
+        self._in_transaction = True
+        try:
+            with self.db:
+                yield
+        finally:
+            self._in_transaction = False
+
+    def handled_replies(self, message_id: str) -> list | None:
+        row = self.db.execute("SELECT replies FROM handled_messages WHERE message_id = ?", (message_id,)).fetchone()
+        return json.loads(row["replies"]) if row else None
+
+    def mark_handled(self, message_id: str, replies: list):
+        self.db.execute("INSERT INTO handled_messages (message_id, replies) VALUES (?, ?)",
+                        (message_id, json.dumps(replies, ensure_ascii=False)))
+        self._commit()
 
     # ── 관심사 ──────────────────────────────────────────
     def add_watch(self, owner_id: str, want: str, keywords: list | None = None,
@@ -76,7 +105,7 @@ class Store:
              json.dumps(keywords, ensure_ascii=False) if keywords else None,
              max_price, int(once), _now()),
         )
-        self.db.commit()
+        self._commit()
         return cur.lastrowid
 
     def active_watches(self) -> list[dict]:
@@ -90,29 +119,33 @@ class Store:
 
     def deactivate(self, watch_id: int):
         self.db.execute("UPDATE watches SET active = 0 WHERE id = ?", (watch_id,))
-        self.db.commit()
+        self._commit()
 
     # ── 딜 ──────────────────────────────────────────────
     def is_empty(self) -> bool:
         return self.db.execute("SELECT 1 FROM deals LIMIT 1").fetchone() is None
 
     def record_deals(self, source: str, deals: list) -> list:
-        """Save deals and return the ones not seen before, each with a group_key.
+        """Save deals and return new or cheaper ones, each with a group_key.
 
-        이미 본 딜은 댓글·추천 수와 종료 여부만 새로 고친다 (순위를 매길 때 최신 반응을 쓰려고).
+        이미 본 딜도 가격·댓글·추천 수와 종료 여부를 새로 고친다 (순위를 매길 때 최신 반응을 쓰려고).
         """
         since = (datetime.now(KST) - GROUP_WINDOW).isoformat()
         recent = [json.loads(row["data"]) | {"group_key": row["group_key"]} for row in self.db.execute(
             "SELECT data, group_key FROM deals WHERE first_seen >= ?", (since,))]
-        known = {row["deal_id"]: row["group_key"] for row in self.db.execute(
-            "SELECT deal_id, group_key FROM deals WHERE source = ?", (source,))}
+        known = {row["deal_id"]: (row["group_key"], row["price"]) for row in self.db.execute(
+            "SELECT deal_id, group_key, price FROM deals WHERE source = ?", (source,))}
 
         new = []
         for deal in deals:
             if deal["id"] in known:
+                group_key, old_price = known[deal["id"]]
+                deal = deal | {"group_key": group_key}
                 self.db.execute("UPDATE deals SET data = ?, price = ? WHERE source = ? AND deal_id = ?",
-                                (json.dumps(deal | {"group_key": known[deal["id"]]}, ensure_ascii=False),
-                                 deal.get("price"), source, deal["id"]))
+                                (json.dumps(deal, ensure_ascii=False), deal.get("price"), source, deal["id"]))
+                if old_price is not None and deal.get("price") is not None and deal["price"] < old_price:
+                    new.append(deal)
+                known[deal["id"]] = (group_key, deal.get("price"))
                 continue
             same = next((seen for seen in recent if same_deal(deal, seen)), None)
             deal = deal | {"group_key": same["group_key"] if same else f"{source}:{deal['id']}"}
@@ -123,9 +156,9 @@ class Store:
                  json.dumps(deal, ensure_ascii=False), _now()),
             )
             recent.append(deal)
-            known[deal["id"]] = deal["group_key"]
+            known[deal["id"]] = (deal["group_key"], deal.get("price"))
             new.append(deal)
-        self.db.commit()
+        self._commit()
         return new
 
     def recent_deals(self, days: float = 3, hours: float | None = None) -> list:
@@ -156,7 +189,7 @@ class Store:
             " notified_at = excluded.notified_at",
             (watch_id, group_key, price, _now()),
         )
-        self.db.commit()
+        self._commit()
 
     def notified_history(self, days: int = 7, limit: int = 15) -> list:
         """최근 보낸 관심사 알림, 최신순. 각 행: owner_id, want, notified_at, title, url."""
@@ -184,7 +217,7 @@ class Store:
         self.db.executemany(
             "INSERT OR REPLACE INTO posted (board, group_key, posted_at) VALUES (?, ?, ?)",
             [(board, key, _now()) for key in group_keys])
-        self.db.commit()
+        self._commit()
 
     # ── 상태 값 (마지막으로 읽은 메시지, 올린 시간대 등) ──────
     def get_meta(self, key: str) -> str | None:
@@ -193,4 +226,4 @@ class Store:
 
     def set_meta(self, key: str, value: str):
         self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", (key, value))
-        self.db.commit()
+        self._commit()

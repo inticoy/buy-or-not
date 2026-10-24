@@ -49,14 +49,14 @@ class Handler:
         price = f" {board.won(max_price)} 이하" if max_price else ""
         tail = " 한 번 알려드리면 자동으로 꺼져요." if once else ""
         if owner == sender:
-            head = f"<@{owner}>님, 알림 설정 완료!"
+            head = f"{people.mention(owner)}님, 알림 설정 완료!"
         else:
-            head = f"<@{owner}>님, <@{sender}>님이 알림을 걸어줬어요!"
-        payload = text(f"🔔 {head} {target}{price} 핫딜이 올라오면 바로 알려드릴게요.{tail}", [owner])
+            head = f"{people.mention(owner)}님, <@{sender}>님이 알림을 걸어줬어요!"
+        payload = text(f"🔔 {head} {target}{price} 핫딜이 올라오면 바로 알려드릴게요.{tail}", [owner] if people.is_discord(owner) else [])
         if owner != sender:
             # 스레드 글은 조용히 가므로, 대신 걸린 사람에게는 DM으로 알린다
             payload["_dm"] = (owner, f"🔔 {board.who(sender)}님이 '{want}' 알림을 걸어줬어요! "
-                                     f"{target}{price} 핫딜이 올라오면 DM으로 알려드릴게요.{tail}")
+                                     f"{target}{price} 핫딜이 올라오면 {'DM으로' if people.is_discord(owner) else '우주로'} 알려드릴게요.{tail}")
         return payload
 
     def remove_watch(self, sender: str, args: dict) -> dict:

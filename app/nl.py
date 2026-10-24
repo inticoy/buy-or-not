@@ -149,7 +149,7 @@ def parse_command(sender: str, text: str, mentions: dict, watches: list) -> dict
     system = _COMMAND_SYSTEM.format(
         people=people.names_for_prompt(),
         mentions=json.dumps(mentions, ensure_ascii=False) or "없음",
-        watches=json.dumps([{"watch_id": w["id"], "owner": f"<@{w['owner_id']}>", "want": w["want"]}
+        watches=json.dumps([{"watch_id": w["id"], "owner": people.mention(w["owner_id"]), "want": w["want"]}
                             for w in watches], ensure_ascii=False),
     )
     try:

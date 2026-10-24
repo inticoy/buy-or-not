@@ -1,4 +1,7 @@
-"""친구 이름·별명 → Discord ID. 목록은 data/people.json (커밋하지 않음)."""
+"""친구 이름·별명 → Discord ID. 목록은 data/people.json (커밋하지 않음).
+
+디스코드를 안 쓰는 사람은 discord_id 자리에 숫자가 아닌 id(예: "woojoo:이름")를 두고, "woojoo"에 우주 계정 이메일을 둔다.
+디스코드 친구도 "woojoo"가 있으면 알림이 DM과 우주 푸시로 함께 간다."""
 import json
 import os
 import re
@@ -31,3 +34,17 @@ def resolve(who: str) -> str | None:
 
 def name_of(discord_id: str) -> str | None:
     return next((p["name"] for p in load() if p["discord_id"] == discord_id), None)
+
+
+def is_discord(person_id: str) -> bool:
+    return person_id.isdigit()
+
+
+def woojoo_of(person_id: str) -> str | None:
+    """우주 푸시를 받을 계정 이메일. 없으면 None."""
+    return next((p.get("woojoo") for p in load() if p["discord_id"] == person_id), None)
+
+
+def mention(person_id: str) -> str:
+    """디스코드 멘션, 디스코드를 안 쓰는 사람은 이름."""
+    return f"<@{person_id}>" if is_discord(person_id) else name_of(person_id) or person_id

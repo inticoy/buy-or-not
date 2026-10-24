@@ -7,10 +7,10 @@ import re
 
 import requests
 
-from . import nl
+from . import nl, people
 from . import monitoring
 from .commands import HELP, Handler, text
-from .notifier import API_BASE, BOT_TOKEN, CHANNEL_ID, THREAD_ID, message_link, send_dm, send_message
+from .notifier import API_BASE, BOT_TOKEN, CHANNEL_ID, THREAD_ID, message_link, push_woojoo, send_dm, send_message
 from .store import Store
 
 logger = logging.getLogger(__name__)
@@ -83,4 +83,7 @@ def _answer(handler: Handler, store: Store, channel: str, me: str, msg: dict, dr
         dm = payload.pop("_dm", None)
         message_id = reply(payload)
         if dm and message_id:
-            send_dm(dm[0], f"{dm[1]}\n→ {message_link(channel, message_id)}")
+            if people.is_discord(dm[0]):
+                send_dm(dm[0], f"{dm[1]}\n→ {message_link(channel, message_id)}")
+            elif email := people.woojoo_of(dm[0]):
+                push_woojoo(email, "살래말래", dm[1], "https://woojoo.woojoo.workers.dev/")  # 디스코드 링크는 못 여니 우주 홈으로

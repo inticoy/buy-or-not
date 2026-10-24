@@ -2,7 +2,7 @@ import logging
 import os
 
 import requests
-from . import monitoring
+from . import monitoring, people
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +12,9 @@ CHANNEL_ID = os.environ.get(f"DISCORD_CHANNEL_{_ENV.upper()}", "")
 THREAD_ID = os.environ.get(f"DISCORD_THREAD_{_ENV.upper()}", "")
 
 API_BASE = "https://discord.com/api/v10"
+# 우주(둘만 쓰는 웹앱)의 푸시 경로. 토큰이 없으면 우주 알림은 건너뛴다
+WOOJOO_PUSH_URL = "https://woojoo.woojoo.workers.dev/api/push"
+WOOJOO_PUSH_TOKEN = os.environ.get("WOOJOO_PUSH_TOKEN", "")
 PLACEHOLDER_IMG = "https://raw.githubusercontent.com/inticoy/buy-or-not/main/assets/placeholder.png"
 
 RANK_EMOJI = {1: "🥇", 2: "🥈", 3: "🥉"}
@@ -108,6 +111,22 @@ def message_link(channel_id: str, message_id: str) -> str:
     return f"https://discord.com/channels/{_guild_ids[channel_id]}/{channel_id}/{message_id}"
 
 
+def push_woojoo(email: str, title: str, body: str, url: str) -> bool:
+    """우주 앱 푸시. 실패해도 디스코드 알림은 그대로 간다."""
+    if not WOOJOO_PUSH_TOKEN:
+        return False
+    try:
+        resp = requests.post(WOOJOO_PUSH_URL, json={"to": [email], "title": title, "body": body, "url": url},
+                             headers={"Authorization": f"Bearer {WOOJOO_PUSH_TOKEN}"}, timeout=15)
+        resp.raise_for_status()
+        if not resp.json().get("sent"):
+            logger.warning("woojoo push: no device accepted it")
+        return True
+    except requests.RequestException as e:
+        logger.warning("woojoo push failed: %s", e)
+        return False
+
+
 def send_dm(user_id: str, content: str | dict) -> bool:
     """DM으로 푸시를 보낸다. content는 글 또는 메시지 payload. 상대가 서버 멤버 DM을 막았으면 False."""
     headers = {"Authorization": f"Bot {BOT_TOKEN}"}
@@ -158,7 +177,7 @@ def send_message(channel_id: str, message: dict, reply_to: str | None = None,
 
 
 def _mentions(user_ids: list) -> str:
-    return ", ".join(f"<@{uid}>님" for uid in user_ids)
+    return ", ".join(f"{people.mention(uid)}님" for uid in user_ids)
 
 
 def build_alert(hits: list, deal: dict, mention: bool = True) -> dict:
@@ -196,7 +215,7 @@ def build_alert(hits: list, deal: dict, mention: bool = True) -> dict:
                 card, {"type": 1, "components": buttons}, {"type": 14}, {"type": 10, "content": footer},
             ]},
         ],
-        "allowed_mentions": {"users": owners if mention else []},  # 대상자만 알림이 가게
+        "allowed_mentions": {"users": [o for o in owners if people.is_discord(o)] if mention else []},  # 대상자만 알림이 가게
     }
 
 
@@ -208,7 +227,11 @@ def post_alert(hits: list, deal: dict, dry_run: bool = False) -> None:
     blocked = []
     for owner in dict.fromkeys(h["owner_id"] for h in hits):
         mine = [h for h in hits if h["owner_id"] == owner]
-        if not send_dm(owner, build_alert(mine, deal, mention=False)):
+        if email := people.woojoo_of(owner):
+            watched = " / ".join(dict.fromkeys(f"'{h['want']}'" for h in mine))
+            price = " · ".join(x for x in (deal.get("price_str"), deal.get("shop") or deal.get("community")) if x)
+            push_woojoo(email, f"🔔 {deal['title'][:60]}", f"{price}\n{watched} 알림", deal.get("product_url") or deal["url"])
+        if people.is_discord(owner) and not send_dm(owner, build_alert(mine, deal, mention=False)):
             blocked += mine
     if blocked:
         send_message(THREAD_ID or CHANNEL_ID, build_alert(blocked, deal), silent=False)

@@ -58,6 +58,7 @@ jobs:
           BOT_ENV: prod
           PYTHONUNBUFFERED: "1"
           SEED_JSON: ${{ secrets.SEED_JSON }}
+          WOOJOO_PUSH_TOKEN: ${{ secrets.WOOJOO_PUSH_TOKEN }}
         run: python -m app cycle
 
       - name: Save state

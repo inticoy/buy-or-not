@@ -96,7 +96,9 @@ def post(store: Store, board_id: str, dry_run: bool) -> bool:
     if board_id == "hot":  # 이번 주에 손꼽히는 딜이 있을 때만 카드 아래에 한마디 (평범한 날은 조용히)
         shown = store.posted_keys("hot", days=7) - {g["key"] for g in picks}
         ranks = voice.standouts(picks, [g for g in ranking.groups(store.recent_deals(days=8)) if g["key"] in shown])
-        for line in voice.comment(picks, ranks):  # 사람이 채팅하듯 한 줄씩 따로 보낸다
+        lines = voice.comment(picks, ranks)
+        logger.info("한마디 — standouts %s → %d줄", ranks, len(lines))
+        for line in lines:  # 사람이 채팅하듯 한 줄씩 따로 보낸다
             if dry_run:
                 print("[DRY RUN] comment:", line)
                 continue

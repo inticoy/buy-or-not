@@ -116,11 +116,12 @@ def push_woojoo(email: str, title: str, body: str, url: str) -> bool:
     if not WOOJOO_PUSH_TOKEN:
         return False
     try:
-        resp = requests.post(WOOJOO_PUSH_URL, json={"to": [email], "title": title, "body": body, "url": url},
+        resp = requests.post(WOOJOO_PUSH_URL, json={"to": [email], "title": title, "body": body, "url": url, "category": "hotdeal"},
                              headers={"Authorization": f"Bearer {WOOJOO_PUSH_TOKEN}"}, timeout=15)
         resp.raise_for_status()
         if not resp.json().get("sent"):
-            logger.warning("woojoo push: no device accepted it")
+            # 기기가 없거나, 받는 사람이 핫딜 알림·조용한 시간을 꺼 뒀을 때. 알림함에는 남는다.
+            logger.info("woojoo push: stored in inbox, no device rang")
         return True
     except requests.RequestException as e:
         logger.warning("woojoo push failed: %s", e)

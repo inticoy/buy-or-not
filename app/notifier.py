@@ -163,6 +163,9 @@ def send_message(channel_id: str, message: dict, reply_to: str | None = None,
     """Post a raw message payload and return its id. Silent by default."""
     if silent:
         message = _silent(message)
+    # 긁어 온 딜 제목에 @everyone·역할 멘션이 섞여 와도 아무도 불리지 않게, 부를 사람은 호출하는 쪽이 정한다
+    if "allowed_mentions" not in message:
+        message = message | {"allowed_mentions": {"parse": [], "replied_user": bool(reply_to)}}
     if reply_to:
         message = message | {"message_reference": {"message_id": reply_to, "fail_if_not_exists": False}}
     resp = requests.post(

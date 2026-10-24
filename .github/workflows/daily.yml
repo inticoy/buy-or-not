@@ -41,7 +41,7 @@ jobs:
           path: |
             data/sallae.db
             data/board.json
-          key: state-${{ github.run_id }}
+          key: state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: state-
 
       - name: Write config
@@ -68,7 +68,7 @@ jobs:
           path: |
             data/sallae.db
             data/board.json
-          key: state-${{ github.run_id }}
+          key: state-${{ github.run_id }}-${{ github.run_attempt }}
 
       # 캐시는 레포당 10GB: 최근 것만 남긴다
       - name: Prune old caches

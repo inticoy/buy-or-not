@@ -190,7 +190,7 @@ def render(name, date, rows, theme="day"):
     # 먼저 행 높이를 계산해 긴 상품명이나 조건이 가격을 밀어내도 잘리지 않게 한다.
     colors = THEMES[theme]
     layout = [_layout(item, 742) for item in rows]
-    header, bottom = 132, 120  # 마지막 행 아래 여백. 너무 붙으면 잘린 카드처럼 보인다.
+    header, bottom = 132, 48  # 아래 여백은 좌우(48)와 같다.
     canvas = Image.new("RGB", (1080, header + sum(entry[-1] for entry in layout) + bottom), colors["bg"])
     draw = ImageDraw.Draw(canvas)
 

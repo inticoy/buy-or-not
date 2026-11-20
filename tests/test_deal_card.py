@@ -46,7 +46,7 @@ def test_five_rows_render_with_long_korean_and_missing_photo(monkeypatch):
     rows = [deal_card.row(group(i, title="긴한글상품명" * 30, shop="판매처" * 12,
                                 image_url="https://whatdeal.kr/thumb" if i < 2 else None)) for i in range(5)]
     image = Image.open(BytesIO(deal_card.render("게임", deal_card.date_label(now), rows)))
-    assert image.format == "PNG" and image.width == 1080 and image.height >= 1326
+    assert image.format == "PNG" and image.width == 1080 and image.height >= 1300
     assert (255, 0, 0) in image.get_flattened_data()
     personal = Image.open(BytesIO(deal_card.render_personal(rows[-1], "food")))
     assert personal.width == 1080

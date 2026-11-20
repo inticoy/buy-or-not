@@ -2,6 +2,7 @@
 
 봇을 멘션한 메시지는 Message Content 권한 없이도 내용을 읽을 수 있다.
 """
+import base64
 import logging
 import re
 
@@ -70,10 +71,11 @@ def _answer(handler: Handler, store: Store, channel: str, me: str, msg: dict, dr
     for payload in payloads:
         payload = payload.copy()
         dm = payload.pop("_dm", None)
+        png = base64.b64decode(payload.pop("_png")) if payload.get("_png") else None
         if dry_run:
             print("[DRY RUN] reply:", payload)
             continue
-        message_id = send_message(channel, payload, msg["id"])
+        message_id = send_message(channel, payload, msg["id"], **({"png": png} if png else {}))
         if dm and message_id:
             if people.is_discord(dm[0]):
                 send_dm(dm[0], f"{dm[1]}\n→ {message_link(channel, message_id)}")

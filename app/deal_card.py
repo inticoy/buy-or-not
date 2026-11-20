@@ -186,7 +186,7 @@ def _paint_row(canvas, draw, colors, item, title, detail, shop, box, text_at):
         label(x, ty + 4, item.price, 54, True)
 
 
-def render(name, date, rows, theme="day"):
+def render(name, date, rows, theme="day", heading=None):
     # 먼저 행 높이를 계산해 긴 상품명이나 조건이 가격을 밀어내도 잘리지 않게 한다.
     colors = THEMES[theme]
     layout = [_layout(item, 742) for item in rows]
@@ -197,7 +197,9 @@ def render(name, date, rows, theme="day"):
     def label(x, y, text, size, bold=False, color=None, anchor="lt"):
         draw.text((x, y), text, font=_font(size, bold), fill=color or colors["ink"], anchor=anchor)
 
-    label(48, 36, f"{name} 핫딜", 60, True)
+    title = heading or f"{name} 핫딜"
+    room = 1032 - 48 - _font(26).getlength(date) - 36
+    label(48, 36, _fit(title, _font(60, True), max(room, 80), 1)[0], 60, True)
     label(1032, 58, date, 26, color=colors["sub"], anchor="rt")
     y = header
     draw.line((48, y, 1032, y), fill=colors["rule"], width=2)

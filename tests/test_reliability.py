@@ -199,6 +199,22 @@ def test_multiple_commands_are_not_reapplied_when_second_reply_fails(store, monk
     parsed.assert_called_once()
 
 
+def test_saved_search_image_is_resent_as_a_file(store, monkeypatch):
+    import base64
+    store.mark_handled("1", [{"flags": 32768, "components": [], "_png": base64.b64encode(b"png-bytes").decode()}])
+    sent = {}
+
+    def send(channel, payload, message_id, png=None):
+        sent["payload"] = payload
+        sent["png"] = png
+        return "reply"
+
+    monkeypatch.setattr(mentions, "send_message", send)
+    mentions._answer(None, store, "channel", "bot", {"id": "1"}, False)
+    assert sent["png"] == b"png-bytes"
+    assert "_png" not in sent["payload"]
+
+
 def test_dry_run_does_not_apply_or_cache_commands(store, monkeypatch):
     store.set_meta(mentions.LAST_KEY, "0")
     mock_mentions(monkeypatch, [mention("1")])

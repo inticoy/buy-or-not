@@ -76,6 +76,39 @@ def test_image_first_multipart_links_and_silent_send(monkeypatch):
     assert [button["label"] for button in links["components"]] == ["1", "2", "3", "4", "5"]
 
 
+def test_search_reply_uses_the_image_card(tmp_path, monkeypatch):
+    store = Store(tmp_path / "test.db")
+    from app.commands import Handler
+
+    def deal(i, title):
+        return {"id": str(i), "source": "test", "title": title, "price": 1000 * i,
+                "price_str": f"{1000 * i:,}원", "url": f"https://example.com/{i}", "shop": "시험몰"}
+
+    store.record_deals("test", [deal(1, "프로 마우스"), deal(2, "다른 상품")])
+    monkeypatch.setattr(deal_card, "render", Mock(return_value=b"png-bytes"))
+    reply = Handler(store).search_deals("123", {"query": "프로"})
+    assert reply["flags"] == 32768 | 4
+    gallery, links = reply["components"]
+    assert gallery["items"][0]["media"] == {"url": "attachment://deals.png"}
+    assert "description" not in gallery["items"][0]
+    assert [button["label"] for button in links["components"]] == ["1"]
+    assert reply["_png"]
+    _, date, rows, theme = deal_card.render.call_args.args
+    assert deal_card.render.call_args.kwargs["heading"] == "'프로' 검색"
+    assert date == "최근 3일 · 1개" and theme == "day" and rows[0].url.endswith("/1")
+
+
+def test_search_card_falls_back_when_rendering_fails(tmp_path, monkeypatch):
+    store = Store(tmp_path / "test.db")
+    from app.commands import Handler
+    store.record_deals("test", [{"id": "1", "source": "test", "title": "프로 마우스", "price": 1000,
+                                 "price_str": "1,000원", "url": "https://example.com/1"}])
+    monkeypatch.setattr(deal_card, "render", Mock(side_effect=OSError("font failed")))
+    reply = Handler(store).search_deals("123", {"query": "프로"})
+    assert "_png" not in reply
+    assert reply["components"][1]["type"] == 17
+
+
 def test_render_fallback_and_slot_retry(tmp_path, monkeypatch):
     store = Store(tmp_path / "test.db")
     picks = [group(1, price_str="800원", shop="시험몰")]

@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 from datetime import datetime
@@ -104,6 +105,19 @@ def scheduled_message(name, date, rows, has_image):
             ]}
 
 
+def search_message(query: str, rows: list, ai: bool) -> dict:
+    """검색 답. 목록과 같은 이미지 카드이고, 제목은 검색어다."""
+    note = f"최근 3일 · {len(rows)}개" + (" · AI가 고름" if ai else "")
+    png = deal_card.render("", note, rows, "day", heading=f"'{query}' 검색")
+    return {"flags": 32768 | 4, "allowed_mentions": {"parse": []},
+            "attachments": [{"id": 0, "filename": "deals.png"}],
+            "components": [
+                {"type": 12, "items": [{"media": {"url": "attachment://deals.png"}}]},
+                {"type": 1, "components": [_link_button(str(i), row.url) for i, row in enumerate(rows, 1)]},
+            ],
+            "_png": base64.b64encode(png).decode()}
+
+
 def post_board(message: dict, dry_run: bool = False, png: bytes | None = None) -> str | None:
     """핫딜 thread(없으면 채널)에 조용히 올린다."""
     if dry_run:
@@ -202,7 +216,7 @@ def send_message(channel_id: str, message: dict, reply_to: str | None = None,
         f"{API_BASE}/channels/{channel_id}/messages",
         **body,
         headers={"Authorization": f"Bot {BOT_TOKEN}"},
-        timeout=10,
+        timeout=20 if png else 10,
     )
     if not resp.ok:
         logger.error("Discord error: %s", resp.text)

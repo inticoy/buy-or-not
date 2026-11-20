@@ -2,9 +2,9 @@
 import logging
 from datetime import datetime
 
-from . import board, nl, people
+from . import board, deal_card, nl, people
 from .matcher import keyword_match
-from .notifier import BOARD_COLOR, build_board
+from .notifier import BOARD_COLOR, build_board, search_message
 from .ranking import groups
 from .store import Store
 
@@ -140,6 +140,11 @@ class Handler:
         found_groups.sort(key=lambda g: g["head"]["first_seen"], reverse=True)
         for g in found_groups:
             g["communities"] = g["communities"] + [_ago(g["head"]["first_seen"])]
-        title = f"🔎 '{query}' 최근 핫딜 {len(found_groups)}개"
-        subtitle = "최근 3일 동안 올라온 딜이에요" + (" (AI가 고름)" if reasons else "")
-        return build_board(title, subtitle, found_groups, BOARD_COLOR["hot"], None, ranked=False)
+        rows = [deal_card.row(g) for g in found_groups]
+        try:
+            return search_message(query, rows, bool(reasons))
+        except Exception:
+            logger.exception("검색 카드 렌더링 실패 — 글 카드로 답함")
+            title = f"🔎 '{query}' 최근 핫딜 {len(found_groups)}개"
+            subtitle = "최근 3일 동안 올라온 딜이에요" + (" (AI가 고름)" if reasons else "")
+            return build_board(title, subtitle, found_groups, BOARD_COLOR["hot"], None, ranked=False)

@@ -1,4 +1,7 @@
+import json
 import logging
+import re
+from urllib.parse import quote
 import os
 
 import requests
@@ -84,13 +87,46 @@ def board_header(date, name: str, emoji: str) -> str:
     return f"{emoji} {date.month}/{date.day}({DAYS_KO[date.weekday()]}) {name} 핫딜"
 
 
-def post_board(message: dict, dry_run: bool = False) -> str | None:
+def scheduled_message(name, date, rows, has_image):
+    components = []
+    if has_image:
+        components.append({"type": 12, "items": [{"media": {"url": "attachment://deals.png"},
+                                                  "description": f"{date} {name} 핫딜"}]})
+    else:
+        components.append({"type": 10, "content": f"## {name} 핫딜 · {date}"})
+    lines = []
+    for row in rows:
+        label = re.sub(r"([\\\[\]_*~`|])", r"\\\1", _title(row.title))
+        url = quote(row.url, safe=":/?&=%#+,;@~!$'*")
+        line = f"[{label}](<{url}>)"
+        if row.price:
+            line += f" · {row.price}"
+        if not has_image:
+            detail = " · ".join(filter(None, (row.shop, row.detail)))
+            if detail:
+                line += " · " + detail[:180]
+        lines.append(line)
+    # Discord limits each Text Display to 4000 characters.
+    block = ""
+    for line in lines:
+        if block and len(block) + len(line) >= 4000:
+            components.append({"type": 10, "content": block})
+            block = ""
+        block = (block + "\n" + line) if block else line
+    components.append({"type": 10, "content": block})
+    message = {"flags": 32768 | 4, "components": components, "allowed_mentions": {"parse": []}}
+    if has_image:
+        message["attachments"] = [{"id": 0, "filename": "deals.png"}]
+    return message
+
+
+def post_board(message: dict, dry_run: bool = False, png: bytes | None = None) -> str | None:
     """핫딜 thread(없으면 채널)에 조용히 올린다."""
     if dry_run:
         import json
         print(json.dumps(message, ensure_ascii=False, indent=1)[:3000])
         return None
-    return send_message(THREAD_ID or CHANNEL_ID, message)
+    return send_message(THREAD_ID or CHANNEL_ID, message, png=png)
 
 
 ALERT_COLOR = 0xF0B232  # 관심사 알림 — 주황
@@ -159,7 +195,7 @@ def send_dm(user_id: str, content: str | dict) -> bool:
 
 
 def send_message(channel_id: str, message: dict, reply_to: str | None = None,
-                 silent: bool = True) -> str:
+                 silent: bool = True, *, png: bytes | None = None) -> str:
     """Post a raw message payload and return its id. Silent by default."""
     if silent:
         message = _silent(message)
@@ -168,9 +204,13 @@ def send_message(channel_id: str, message: dict, reply_to: str | None = None,
         message = message | {"allowed_mentions": {"parse": [], "replied_user": bool(reply_to)}}
     if reply_to:
         message = message | {"message_reference": {"message_id": reply_to, "fail_if_not_exists": False}}
+    body = {"json": message} if png is None else {
+        "data": {"payload_json": json.dumps(message)},
+        "files": {"files[0]": ("deals.png", png, "image/png")},
+    }
     resp = requests.post(
         f"{API_BASE}/channels/{channel_id}/messages",
-        json=message,
+        **body,
         headers={"Authorization": f"Bot {BOT_TOKEN}"},
         timeout=10,
     )

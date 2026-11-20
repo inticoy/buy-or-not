@@ -76,8 +76,8 @@ class Store:
             self.db.commit()
 
     @contextmanager
-    def command_transaction(self):
-        # 명령 적용과 답장 저장은 함께 커밋한다. 재시도 때 명령이 다시 적용되지 않게.
+    def transaction(self):
+        # 관련 상태를 함께 커밋해 재시도 때 일부만 적용되지 않게 한다.
         self._in_transaction = True
         try:
             with self.db:

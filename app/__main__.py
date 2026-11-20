@@ -13,24 +13,20 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 load_dotenv()
 
-from . import board, matcher, mentions, ranking, sources, voice
-from .notifier import BOARD_COLOR, CHANNEL_ID, THREAD_ID, board_header, build_board, post_alert, post_board, send_message
+from . import board, deal_card, matcher, mentions, ranking, sources, voice
+from .notifier import CHANNEL_ID, THREAD_ID, scheduled_message, post_alert, post_board, send_message
 from .store import KST, Store
 from . import monitoring
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-# 게시판: 순위를 매길 범위(시간), 올리는 시각(KST), 맨 아래 더 보기 링크
+# 게시판별 집계 범위와 게시 시각(KST)
 BOARDS = {
-    "hot": {"name": "인기", "emoji": "🔥", "category": None, "hours": 16, "slots": (12, 21),
-            "more": ("hotdeal.zip 인기 더 보기", "https://hotdeal.zip/%EC%9D%B8%EA%B8%B0")},
-    "game": {"name": "게임", "emoji": "🎮", "category": "game", "hours": 24, "slots": (12,),
-             "more": ("알구몬 게임 랭킹 더 보기", "https://www.algumon.com/n/deal/rank?categoryId=6")},
-    "digital": {"name": "IT", "emoji": "💻", "category": "digital", "hours": 24, "slots": (12,),
-                "more": ("알구몬 IT 랭킹 더 보기", "https://www.algumon.com/n/deal/rank?categoryId=2")},
-    "food": {"name": "식품", "emoji": "🍜", "category": "food", "hours": 24, "slots": (12,),
-             "more": ("알구몬 식품 랭킹 더 보기", "https://www.algumon.com/n/deal/rank?categoryId=3")},
+    "hot": {"name": "인기", "category": None, "hours": 16, "slots": (12, 21)},
+    "game": {"name": "게임", "category": "game", "hours": 24, "slots": (12,)},
+    "digital": {"name": "IT", "category": "digital", "hours": 24, "slots": (12,)},
+    "food": {"name": "식품", "category": "food", "hours": 24, "slots": (12,)},
 }
 TOP_N = 5
 LATE_LIMIT = timedelta(hours=3)  # Actions가 늦게 돌아도 이 안이면 그 시간대 글을 올린다
@@ -89,14 +85,22 @@ def post(store: Store, board_id: str, dry_run: bool, slot_key: str | None = None
     if not picks:
         logger.warning("%s — 올릴 딜 없음", cfg["name"])
         return False
-    when = "저녁" if now.hour >= 18 else "점심" if now.hour >= 11 else "오늘"
-    message = build_board(board_header(now, cfg["name"], cfg["emoji"]), f"{when} TOP {len(picks)}", picks,
-                          BOARD_COLOR[board_id], cfg["more"])
-    post_board(message, dry_run)
+    rows = [deal_card.row(group) for group in picks]
+    date = deal_card.date_label(now)
+    try:
+        png = deal_card.render(cfg["name"], date, rows)
+    except Exception:
+        logger.exception("카드 렌더링 실패 — 원문 링크와 상품 정보로 게시")
+        png = None
+    message = scheduled_message(cfg["name"], date, rows, png is not None)
+    post_board(message, dry_run, png)
     if not dry_run:
-        if slot_key:
-            store.set_meta(slot_key, datetime.now(KST).isoformat(timespec="seconds"))
-        store.mark_posted(board_id, [key for g in picks for key in [g["key"]] + [e["key"] for e in g.get("same_event", [])]])
+        with store.transaction():
+            if slot_key:
+                store.set_meta(slot_key, now.isoformat(timespec="seconds"))
+            keys = [g["key"] for g in picks]
+            keys.extend(event["key"] for g in picks for event in g.get("same_event", []))
+            store.mark_posted(board_id, keys)
     if board_id == "hot":  # 이번 주에 손꼽히는 딜이 있을 때만 카드 아래에 한마디 (평범한 날은 조용히)
         shown = store.posted_keys("hot", days=7) - {g["key"] for g in picks}
         ranks = voice.standouts(picks, [g for g in ranking.groups(store.recent_deals(days=8)) if g["key"] in shown])

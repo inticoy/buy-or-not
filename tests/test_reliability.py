@@ -65,7 +65,7 @@ def test_slot_completed_before_commentary(store, main, monkeypatch, failure):
     pick = {"key": "test:1", "head": deal()}
     monkeypatch.setattr(main.ranking, "top", Mock(return_value=[pick]))
     monkeypatch.setattr(main.ranking, "groups", Mock(return_value=[]))
-    monkeypatch.setattr(main, "build_board", Mock(return_value={}))
+    monkeypatch.setattr(main.deal_card, "render", Mock(return_value=b"png"))
     posted = Mock(side_effect=RuntimeError("board failed") if failure == "board" else None)
     monkeypatch.setattr(main, "post_board", posted)
     monkeypatch.setattr(main.voice, "standouts", Mock(return_value=[]))

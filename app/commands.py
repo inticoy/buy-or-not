@@ -41,7 +41,7 @@ class Handler:
         cached = self.store.handled_replies(message_id)
         if cached is not None:
             return cached
-        with self.store.command_transaction():
+        with self.store.transaction():
             replies = []
             for name, args in calls:
                 action = getattr(self, name, None)

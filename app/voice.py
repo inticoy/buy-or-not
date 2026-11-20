@@ -12,7 +12,7 @@ TOP_SHARE = 0.15
 
 _PROMPT = """너는 친구들 디스코드 핫딜 스레드의 살래말래야. 방금 올린 인기 핫딜 중 이번 주에 손꼽히게 반응이 좋은 딜들이야.
 이 중 진짜 사야 되는 딜 1~2개만 골라 사라고 부추기는 한 줄씩 써. 가격이 왜 좋은지, 누구한테 좋은지 같은 이유를 짧게.
-각 줄은 그 딜의 n을 그대로 써서 "3번 "처럼 시작해 (새로 1, 2로 매기지 마). 최대 2줄. 정말 살 만한 게 없으면 빈 배열.
+각 줄은 알아볼 수 있는 짧은 상품명으로 시작해. 순번이나 순위는 쓰지 마. 최대 2줄. 정말 살 만한 게 없으면 빈 배열.
 가격은 price에 적힌 그대로만 말하고, 직접 계산하거나 바꿔 읽지 마.
 
 말투 규칙:
@@ -46,7 +46,7 @@ def standouts(picks: list, week: list) -> list[int]:
 def comment(picks: list, ranks: list[int]) -> list[str]:
     if not ranks:
         return []
-    deals = [{"n": r, "title": picks[r - 1]["head"]["title"], "price": picks[r - 1]["head"].get("price_str"),
+    deals = [{"title": picks[r - 1]["head"]["title"], "price": picks[r - 1]["head"].get("price_str"),
               "shop": picks[r - 1]["head"].get("shop")} for r in ranks]
     prompt = _PROMPT.format(deals=json.dumps(deals, ensure_ascii=False))
     for model in (JUDGE_MODEL, MODEL):

@@ -32,6 +32,13 @@ jobs:
           python-version: "3.14"
           cache: pip
 
+      - name: Korean card fonts
+        run: |
+          if ! fc-match -f '%{family}' 'Noto Sans CJK KR' | grep -q 'Noto Sans CJK KR'; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends fontconfig fonts-noto-cjk
+          fi
+
       - run: pip install -r requirements.txt
 
       # 상태(딜·알림·올린 글 기록)는 매번 새 키로 저장하고 가장 최근 것을 복원한다.

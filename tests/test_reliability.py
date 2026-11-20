@@ -37,7 +37,7 @@ def test_alert_records_only_reached_recipients(store, main, monkeypatch):
         store.add_watch(owner, "coffee", ["coffee"], once=True)
     monkeypatch.setattr(notifier.people, "woojoo_of", lambda owner: owner if owner.startswith("woojoo:") else None)
     monkeypatch.setattr(notifier, "push_woojoo", lambda email, *args: email == "woojoo:ok")
-    monkeypatch.setattr(notifier, "send_dm", lambda owner, payload: owner == "123")
+    monkeypatch.setattr(notifier, "send_dm", lambda owner, payload, png=None: owner == "123")
     fallback = Mock(return_value="posted")
     monkeypatch.setattr(notifier, "send_message", fallback)
     monkeypatch.setattr(main.board, "update", Mock())

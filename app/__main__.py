@@ -86,13 +86,15 @@ def post(store: Store, board_id: str, dry_run: bool, slot_key: str | None = None
         logger.warning("%s — 올릴 딜 없음", cfg["name"])
         return False
     rows = [deal_card.row(group) for group in picks]
-    date = deal_card.date_label(now)
+    when = "저녁" if now.hour >= 18 else "점심" if now.hour >= 11 else "오늘"
+    date = deal_card.date_label(now, when)
+    theme = "night" if board_id == "hot" and when == "저녁" else {"food": "food", "game": "game", "digital": "it"}.get(board_id, "day")
     try:
-        png = deal_card.render(cfg["name"], date, rows)
+        png = deal_card.render(cfg["name"], date, rows, theme)
     except Exception:
-        logger.exception("카드 렌더링 실패 — 원문 링크와 상품 정보로 게시")
-        png = None
-    message = scheduled_message(cfg["name"], date, rows, png is not None)
+        logger.exception("카드 렌더링 실패 — 이번 슬롯은 글을 올리지 않음")
+        return False
+    message = scheduled_message(cfg["name"], date, rows, True)
     post_board(message, dry_run, png)
     if not dry_run:
         with store.transaction():

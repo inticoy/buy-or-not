@@ -47,7 +47,11 @@ def test_five_rows_render_with_long_korean_and_missing_photo(monkeypatch):
                                 image_url="https://whatdeal.kr/thumb" if i < 2 else None)) for i in range(5)]
     image = Image.open(BytesIO(deal_card.render("게임", deal_card.date_label(now), rows)))
     assert image.format == "PNG" and image.width == 1080 and image.height >= 1326
-    assert image.getpixel((153, 290)) == (255, 0, 0)
+    assert (255, 0, 0) in image.get_flattened_data()
+    personal = Image.open(BytesIO(deal_card.render_personal(rows[-1], "food")))
+    assert personal.width == 1080
+    assert personal.getpixel((0, 0)) == (255, 246, 216)
+    assert personal.getpixel((0, personal.height - 1)) == personal.getpixel((personal.width - 1, 0))
     assert get.call_count == 2
     assert deal_card.photo("http://127.0.0.1/test") is None
 
@@ -64,44 +68,30 @@ def test_image_first_multipart_links_and_silent_send(monkeypatch):
     assert message["flags"] == 32768 | 4096 | 4
     assert message["allowed_mentions"] == {"parse": []}
     gallery, links = message["components"]
-    assert gallery["type"] == 12 and gallery["items"][0]["media"]["url"] == "attachment://deals.png"
+    assert gallery["type"] == 12 and gallery["items"][0]["media"] == {"url": "attachment://deals.png"}
+    assert "description" not in gallery["items"][0]
     assert message["attachments"] == [{"id": 0, "filename": "deals.png"}]
     assert body["files"] == {"files[0]": ("deals.png", b"image", "image/png")}
-    assert links["type"] == 10
-    assert links["content"].splitlines() == [
-        f"[［{i}］ 시험(옵션)](<https://example.com/{i}>)" + (" · 2,000원" if i else "") for i in range(5)]
+    assert links["type"] == 1
+    assert [button["label"] for button in links["components"]] == ["1", "2", "3", "4", "5"]
 
 
-@pytest.mark.parametrize("send_ok", [True, False])
-def test_render_fallback_and_slot_retry(tmp_path, monkeypatch, send_ok):
+def test_render_fallback_and_slot_retry(tmp_path, monkeypatch):
     store = Store(tmp_path / "test.db")
     picks = [group(1, price_str="800원", shop="시험몰")]
     monkeypatch.setattr(main.ranking, "top", Mock(return_value=picks))
     monkeypatch.setattr(main.deal_card, "render", Mock(side_effect=OSError("font failed")))
     send = Mock()
-    def deliver(payload, dry_run, png):
-        assert png is None and not dry_run
-        assert [part["type"] for part in payload["components"]] == [10, 10]
-        assert payload["components"][1]["content"] == "[상품 1](<https://example.com/1>) · 800원 · 시험몰"
-        if not send_ok:
-            raise requests.ConnectionError()
-        return "delivered"
-    send.side_effect = deliver
     monkeypatch.setattr(main, "post_board", send)
     now = datetime(2026, 11, 21, 12, tzinfo=KST)
     due = main.due_boards(store, now)
     assert [board for board, key in due] == ["hot", "game", "digital", "food"]
     [(board, key)] = [(b, k) for b, k in due if b == "game"]
-    if send_ok:
-        assert main.post(store, board, False, key)
-    else:
-        with pytest.raises(requests.ConnectionError):
-            main.post(store, board, False, key)
-    assert bool(store.get_meta(key)) == send_ok
-    assert store.posted_keys(board) == ({"test:1"} if send_ok else set())
-    assert ((board, key) not in main.due_boards(store, now)) == send_ok
+    assert main.post(store, board, False, key) is False
+    assert store.get_meta(key) is None and not store.posted_keys(board)
+    assert (board, key) in main.due_boards(store, now)
     assert [b for b, _ in main.due_boards(store, now.replace(hour=21))] == ["hot"]
-    send.assert_called_once()
+    send.assert_not_called()
 
 
 def test_board_state_rolls_back_atomically(tmp_path, monkeypatch):

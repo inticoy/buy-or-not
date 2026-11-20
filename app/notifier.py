@@ -1,11 +1,12 @@
 import json
 import logging
-import re
+from datetime import datetime
 from urllib.parse import quote
 import os
 
 import requests
-from . import monitoring, people
+from . import deal_card, monitoring, people
+from .store import KST
 
 logger = logging.getLogger(__name__)
 
@@ -87,37 +88,20 @@ def board_header(date, name: str, emoji: str) -> str:
     return f"{emoji} {date.month}/{date.day}({DAYS_KO[date.weekday()]}) {name} 핫딜"
 
 
+# 이 시각 전 관심사 알림은 기존 글 카드를 유지한다. 목록은 12시 슬롯부터 새 카드가 나간다.
+IMAGE_ALERT_FROM = datetime(2026, 11, 21, 12, tzinfo=KST)
+
+
 def scheduled_message(name, date, rows, has_image):
-    components = []
-    if has_image:
-        components.append({"type": 12, "items": [{"media": {"url": "attachment://deals.png"},
-                                                  "description": f"{date} {name} 핫딜"}]})
-    else:
-        components.append({"type": 10, "content": f"## {name} 핫딜 · {date}"})
-    lines = []
-    for row in rows:
-        label = re.sub(r"([\\\[\]_*~`|])", r"\\\1", _title(row.title))
-        url = quote(row.url, safe=":/?&=%#+,;@~!$'*")
-        line = f"[{label}](<{url}>)"
-        if row.price:
-            line += f" · {row.price}"
-        if not has_image:
-            detail = " · ".join(filter(None, (row.shop, row.detail)))
-            if detail:
-                line += " · " + detail[:180]
-        lines.append(line)
-    # Discord limits each Text Display to 4000 characters.
-    block = ""
-    for line in lines:
-        if block and len(block) + len(line) >= 4000:
-            components.append({"type": 10, "content": block})
-            block = ""
-        block = (block + "\n" + line) if block else line
-    components.append({"type": 10, "content": block})
-    message = {"flags": 32768 | 4, "components": components, "allowed_mentions": {"parse": []}}
-    if has_image:
-        message["attachments"] = [{"id": 0, "filename": "deals.png"}]
-    return message
+    if not has_image:
+        return None
+    # description을 넣으면 디스코드가 이미지 위에 대체 버튼을 올려 그림을 가린다.
+    return {"flags": 32768 | 4, "allowed_mentions": {"parse": []},
+            "attachments": [{"id": 0, "filename": "deals.png"}],
+            "components": [
+                {"type": 12, "items": [{"media": {"url": "attachment://deals.png"}}]},
+                {"type": 1, "components": [_link_button(str(i), row.url) for i, row in enumerate(rows, 1)]},
+            ]}
 
 
 def post_board(message: dict, dry_run: bool = False, png: bytes | None = None) -> str | None:
@@ -164,17 +148,23 @@ def push_woojoo(email: str, title: str, body: str, url: str) -> bool:
         return False
 
 
-def send_dm(user_id: str, content: str | dict) -> bool:
+def send_dm(user_id: str, content: str | dict, png: bytes | None = None) -> bool:
     """DM으로 푸시를 보낸다. content는 글 또는 메시지 payload. 상대가 서버 멤버 DM을 막았으면 False."""
     headers = {"Authorization": f"Bot {BOT_TOKEN}"}
     try:
         dm = requests.post(f"{API_BASE}/users/@me/channels", json={"recipient_id": user_id},
                            headers=headers, timeout=10)
         dm.raise_for_status()
-        resp = requests.post(f"{API_BASE}/channels/{dm.json()['id']}/messages",
-                             json=content if isinstance(content, dict)
-                             else {"content": content, "flags": 4},  # 4: 링크 미리보기 숨김
-                             headers=headers, timeout=10)
+        if isinstance(content, dict) and png is not None:
+            resp = requests.post(f"{API_BASE}/channels/{dm.json()['id']}/messages",
+                                 data={"payload_json": json.dumps(content)},
+                                 files={"files[0]": ("alert.png", png, "image/png")},
+                                 headers=headers, timeout=20)
+        else:
+            resp = requests.post(f"{API_BASE}/channels/{dm.json()['id']}/messages",
+                                 json=content if isinstance(content, dict)
+                                 else {"content": content, "flags": 4},  # 4: 링크 미리보기 숨김
+                                 headers=headers, timeout=10)
         resp.raise_for_status()
         monitoring.observe("discord.dm")
         return True
@@ -224,11 +214,42 @@ def _mentions(user_ids: list) -> str:
     return ", ".join(f"{people.mention(uid)}님" for uid in user_ids)
 
 
+def _alert_theme(deal: dict) -> str:
+    category = str(deal.get("category") or "").lower()
+    if category in {"food", "식품", "음식"}:
+        return "food"
+    if category in {"game", "게임"}:
+        return "game"
+    if category in {"digital", "it", "디지털"}:
+        return "it"
+    return "day"
+
+
+def _alert_card(hits: list, deal: dict, mention: bool) -> dict:
+    owners = list(dict.fromkeys(h["owner_id"] for h in hits))
+    item = deal_card.row({"head": deal})
+    png = deal_card.render_personal(item, _alert_theme(deal))
+    buttons = [_link_button("보러 가기", deal.get("product_url") or deal["url"])]
+    if deal.get("product_url"):
+        buttons.append(_link_button("원문 보기", deal["url"]))
+    return {
+        "flags": 32768,
+        "components": [
+            {"type": 12, "items": [{"media": {"url": "attachment://alert.png"}}]},
+            {"type": 1, "components": buttons},
+        ],
+        "allowed_mentions": {"users": [o for o in owners if people.is_discord(o)] if mention else []},
+        "_png": png,
+    }
+
+
 def build_alert(hits: list, deal: dict, mention: bool = True) -> dict:
     """hits: [{"owner_id", "want", "reason", "price_drop"}] — 같은 딜에 걸린 관심사들.
 
     mention=False는 DM용: 태그 없이 받는 사람에게 바로 말한다.
     """
+    if datetime.now(KST) >= IMAGE_ALERT_FROM:
+        return _alert_card(hits, deal, mention)
     owners = list(dict.fromkeys(h["owner_id"] for h in hits))
     where = deal.get("shop") or deal.get("community") or "커뮤니티"
     drop = " 가격이 더 내려갔어요!" if any(h.get("price_drop") for h in hits) else ""
@@ -266,7 +287,10 @@ def build_alert(hits: list, deal: dict, mention: bool = True) -> dict:
 def post_alert(hits: list, deal: dict, dry_run: bool = False) -> dict[str, bool]:
     """DM·우주로 알리고 수신자별 성공 여부를 돌려준다. DM을 막은 사람은 thread에서 태그한다."""
     if dry_run:
-        print(f"\n[DRY RUN] alert → {build_alert(hits, deal)['components'][0]['content']}")
+        message = build_alert(hits, deal)
+        message.pop("_png", None)
+        lead = message["components"][0].get("content") or deal["title"]
+        print(f"\n[DRY RUN] alert → {lead}")
         return {}
     outcomes = dict.fromkeys((h["owner_id"] for h in hits), False)
     blocked = []
@@ -277,13 +301,17 @@ def post_alert(hits: list, deal: dict, dry_run: bool = False) -> dict[str, bool]
             price = " · ".join(x for x in (deal.get("price_str"), deal.get("shop") or deal.get("community")) if x)
             outcomes[owner] = push_woojoo(email, f"🔔 {deal['title'][:60]}", f"{price}\n{watched} 알림", deal.get("product_url") or deal["url"])
         if people.is_discord(owner):
-            if send_dm(owner, build_alert(mine, deal, mention=False)):
+            message = build_alert(mine, deal, mention=False)
+            png = message.pop("_png", None)
+            if send_dm(owner, message, png):
                 outcomes[owner] = True
             else:
                 blocked += mine
     if blocked:
         try:
-            send_message(THREAD_ID or CHANNEL_ID, build_alert(blocked, deal), silent=False)
+            message = build_alert(blocked, deal)
+            png = message.pop("_png", None)
+            send_message(THREAD_ID or CHANNEL_ID, message, silent=False, png=png)
             for hit in blocked:
                 outcomes[hit["owner_id"]] = True
         except requests.RequestException as exc:

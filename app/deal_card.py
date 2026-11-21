@@ -12,6 +12,8 @@ from urllib.parse import urlsplit
 import requests
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+from .sources import HEADERS
+
 logger = logging.getLogger(__name__)
 THEMES = {
     # 인기 점심은 흰색, 저녁 인기만 어둡게. 카테고리와 개인 알림은 아주 연한 색.
@@ -79,7 +81,9 @@ def row(group: dict) -> Row:
     # 조건이 붙은 원문 가격 필드는 원문 그대로 보조 줄에 보존한다.
     if raw and not price and CONDITIONAL.search(raw) and raw not in title:
         detail = " · ".join(filter(None, (detail, raw)))
-    return Row(title or head["title"], detail, price, shop, head["url"], head.get("image_url"))
+    # 루리웹 대표 글은 사진이 없다. 같은 묶음에 이미 모아 둔 썸네일을 쓴다.
+    image = head.get("image_url") or group.get("image_url")
+    return Row(title or head["title"], detail, price, shop, head["url"], image)
 
 
 def date_label(now: datetime, when: str | None = None) -> str:
@@ -136,7 +140,9 @@ def photo(url):
             return None
         start = monotonic()
         data = BytesIO()
-        with requests.get(url, timeout=(2, 2), stream=True, allow_redirects=False) as response:
+        # 퀘이사존·어미새는 브라우저 식별자가 없으면 403으로 사진을 거절한다.
+        with requests.get(url, headers={"User-Agent": HEADERS["User-Agent"]},
+                          timeout=(2, 2), stream=True, allow_redirects=False) as response:
             if response.status_code != 200:
                 return None
             for chunk in response.iter_content(65536):

@@ -53,7 +53,18 @@ def test_five_rows_render_with_long_korean_and_missing_photo(monkeypatch):
     assert personal.getpixel((0, 0)) == (255, 246, 216)
     assert personal.getpixel((0, personal.height - 1)) == personal.getpixel((personal.width - 1, 0))
     assert get.call_count == 2
+    assert "Mozilla" in get.call_args.kwargs["headers"]["User-Agent"]
     assert deal_card.photo("http://127.0.0.1/test") is None
+
+
+def test_row_uses_the_group_photo_when_the_head_has_none():
+    shared = "https://i1.ruliweb.com/img/a.jpg"
+    item = deal_card.row({"head": {"title": "상품", "url": "https://example.com/1"}, "image_url": shared})
+    assert item.image == shared
+    own = "https://whatdeal.kr/own.jpg"
+    item = deal_card.row({"head": {"title": "상품", "url": "https://example.com/1", "image_url": own},
+                          "image_url": shared})
+    assert item.image == own
 
 
 def test_image_first_multipart_links_and_silent_send(monkeypatch):

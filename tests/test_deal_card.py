@@ -76,6 +76,18 @@ def test_image_first_multipart_links_and_silent_send(monkeypatch):
     assert [button["label"] for button in links["components"]] == ["1", "2", "3", "4", "5"]
 
 
+def test_personal_alert_is_the_image_card(monkeypatch):
+    monkeypatch.setattr(deal_card, "render_personal", Mock(return_value=b"png"))
+    deal = {"title": "프로 마우스", "url": "https://example.com/1", "product_url": "https://shop.example/1",
+            "price_str": "1,000원", "category": "식품"}
+    alert = notifier.build_alert([{"owner_id": "1", "want": "단백질", "reason": "맞아요"}], deal, mention=False)
+    assert alert["_png"] == b"png"
+    gallery, links = alert["components"]
+    assert gallery["items"][0]["media"] == {"url": "attachment://alert.png"}
+    assert [button["label"] for button in links["components"]] == ["보러 가기", "원문 보기"]
+    assert deal_card.render_personal.call_args.args[1] == "food"
+
+
 def test_search_reply_uses_the_image_card(tmp_path, monkeypatch):
     store = Store(tmp_path / "test.db")
     from app.commands import Handler

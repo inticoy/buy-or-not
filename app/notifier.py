@@ -1,13 +1,11 @@
 import base64
 import json
 import logging
-from datetime import datetime
 from urllib.parse import quote
 import os
 
 import requests
 from . import deal_card, monitoring, people
-from .store import KST
 
 logger = logging.getLogger(__name__)
 
@@ -89,10 +87,6 @@ def board_header(date, name: str, emoji: str) -> str:
     return f"{emoji} {date.month}/{date.day}({DAYS_KO[date.weekday()]}) {name} 핫딜"
 
 
-# 이 시각 전 관심사 알림은 기존 글 카드를 유지한다. 목록은 12시 슬롯부터 새 카드가 나간다.
-IMAGE_ALERT_FROM = datetime(2026, 11, 21, 12, tzinfo=KST)
-
-
 def scheduled_message(name, date, rows, has_image):
     if not has_image:
         return None
@@ -125,9 +119,6 @@ def post_board(message: dict, dry_run: bool = False, png: bytes | None = None) -
         print(json.dumps(message, ensure_ascii=False, indent=1)[:3000])
         return None
     return send_message(THREAD_ID or CHANNEL_ID, message, png=png)
-
-
-ALERT_COLOR = 0xF0B232  # 관심사 알림 — 주황
 
 
 def _silent(message: dict) -> dict:
@@ -224,10 +215,6 @@ def send_message(channel_id: str, message: dict, reply_to: str | None = None,
     return resp.json()["id"]
 
 
-def _mentions(user_ids: list) -> str:
-    return ", ".join(f"{people.mention(uid)}님" for uid in user_ids)
-
-
 def _alert_theme(deal: dict) -> str:
     category = str(deal.get("category") or "").lower()
     if category in {"food", "식품", "음식"}:
@@ -262,40 +249,7 @@ def build_alert(hits: list, deal: dict, mention: bool = True) -> dict:
 
     mention=False는 DM용: 태그 없이 받는 사람에게 바로 말한다.
     """
-    if datetime.now(KST) >= IMAGE_ALERT_FROM:
-        return _alert_card(hits, deal, mention)
-    owners = list(dict.fromkeys(h["owner_id"] for h in hits))
-    where = deal.get("shop") or deal.get("community") or "커뮤니티"
-    drop = " 가격이 더 내려갔어요!" if any(h.get("price_drop") for h in hits) else ""
-    to = f"{_mentions(owners)}, " if mention else "🔔 "
-    headline = f"{to}{where}에서 **{_title(deal['title'])}** 핫딜이 떴어요!{drop}"
-
-    price = deal.get("price_str") or "가격 미확인"
-    if deal.get("price") is None and deal.get("price_str"):
-        price += " (가격 확인 필요)"
-    meta = " · ".join(x for x in (deal.get("shop"), deal.get("community")) if x)
-    if deal.get("comments"):
-        meta += f" · 💬 {deal['comments']}"
-    body = f"### [{_title(deal['title'])}]({deal['url']})\n💰 **{price}**" + (f"\n-# {meta}" if meta else "")
-    watched = " / ".join(dict.fromkeys(f"'{h['want']}'" for h in hits))
-    reasons = [f"💬 {h['reason']}" for h in hits if h.get("reason")]
-    footer = "\n".join(reasons + [f"-# 🔔 {watched} 알림 · 끄려면 `@살래말래 {hits[0]['want']} 알림 꺼줘`"])
-
-    card = {"type": 9, "components": [{"type": 10, "content": body}],
-            "accessory": {"type": 11, "media": {"url": _media(deal.get("image_url"))}}}
-    buttons = [_link_button("보러 가기", deal.get("product_url") or deal["url"])]
-    if deal.get("product_url"):
-        buttons.append(_link_button("원문 보기", deal["url"]))
-    return {
-        "flags": 32768,  # IS_COMPONENTS_V2
-        "components": [
-            {"type": 10, "content": headline},
-            {"type": 17, "accent_color": ALERT_COLOR, "components": [
-                card, {"type": 1, "components": buttons}, {"type": 14}, {"type": 10, "content": footer},
-            ]},
-        ],
-        "allowed_mentions": {"users": [o for o in owners if people.is_discord(o)] if mention else []},  # 대상자만 알림이 가게
-    }
+    return _alert_card(hits, deal, mention)
 
 
 def post_alert(hits: list, deal: dict, dry_run: bool = False) -> dict[str, bool]:
